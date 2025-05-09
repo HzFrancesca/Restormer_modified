@@ -1,0 +1,1727 @@
+2025-04-17 20:55:34,577 INFO: 
+                ____                _       _____  ____
+               / __ ) ____ _ _____ (_)_____/ ___/ / __ \
+              / __  |/ __ `// ___// // ___/\__ \ / /_/ /
+             / /_/ // /_/ /(__  )/ // /__ ___/ // _, _/
+            /_____/ \__,_//____//_/ \___//____//_/ |_|
+     ______                   __   __                 __      __
+    / ____/____   ____   ____/ /  / /   __  __ _____ / /__   / /
+   / / __ / __ \ / __ \ / __  /  / /   / / / // ___// //_/  / /
+  / /_/ // /_/ // /_/ // /_/ /  / /___/ /_/ // /__ / /<    /_/
+  \____/ \____/ \____/ \____/  /_____/\____/ \___//_/|_|  (_)
+    
+Version Information: 
+	BasicSR: 1.2.0+unknown
+	PyTorch: 1.8.1+cu111
+	TorchVision: 0.9.1+cu111
+2025-04-17 20:55:34,580 INFO: 
+  name: DefocusDeblur_Single_8bit_Restormer_MAX320_642111
+  model_type: ImageCleanModel
+  scale: 1
+  num_gpu: 1
+  manual_seed: 100
+  datasets:[
+    train:[
+      name: TrainSet
+      type: Dataset_PairedImage
+      dataroot_gt: ./Defocus_Deblurring/Datasets/train/DPDD/target_crops
+      dataroot_lq: ./Defocus_Deblurring/Datasets/train/DPDD/inputC_crops
+      geometric_augs: True
+      filename_tmpl: {}
+      io_backend:[
+        type: disk
+      ]
+      use_shuffle: True
+      num_worker_per_gpu: 8
+      batch_size_per_gpu: 8
+      mini_batch_sizes: [6, 4, 2, 1, 1, 1]
+      iters: [128000, 100000, 96000, 72000, 36000, 24000]
+      gt_size: 384
+      gt_sizes: [128, 160, 192, 256, 288, 320]
+      dataset_enlarge_ratio: 1
+      prefetch_mode: None
+      phase: train
+      scale: 1
+    ]
+    val:[
+      name: ValSet
+      type: Dataset_PairedImage
+      dataroot_gt: ./Defocus_Deblurring/Datasets/val/DPDD/target_crops
+      dataroot_lq: ./Defocus_Deblurring/Datasets/val/DPDD/inputC_crops
+      io_backend:[
+        type: disk
+      ]
+      phase: val
+      scale: 1
+    ]
+  ]
+  network_g:[
+    type: Restormer
+    inp_channels: 3
+    out_channels: 3
+    dim: 48
+    num_blocks: [4, 6, 6, 8]
+    num_refinement_blocks: 4
+    heads: [1, 2, 4, 8]
+    ffn_expansion_factor: 2.66
+    bias: False
+    LayerNorm_type: WithBias
+    dual_pixel_task: False
+  ]
+  path:[
+    pretrain_network_g: None
+    strict_load_g: True
+    resume_state: None
+    root: d:\2024_hzf\programs\restormer
+    experiments_root: d:\2024_hzf\programs\restormer\experiments\DefocusDeblur_Single_8bit_Restormer_MAX320_642111
+    models: d:\2024_hzf\programs\restormer\experiments\DefocusDeblur_Single_8bit_Restormer_MAX320_642111\models
+    training_states: d:\2024_hzf\programs\restormer\experiments\DefocusDeblur_Single_8bit_Restormer_MAX320_642111\training_states
+    log: d:\2024_hzf\programs\restormer\experiments\DefocusDeblur_Single_8bit_Restormer_MAX320_642111
+    visualization: d:\2024_hzf\programs\restormer\experiments\DefocusDeblur_Single_8bit_Restormer_MAX320_642111\visualization
+  ]
+  train:[
+    total_iter: 456000
+    warmup_iter: -1
+    use_grad_clip: True
+    scheduler:[
+      type: CosineAnnealingRestartCyclicLR
+      periods: [128000, 328000]
+      restart_weights: [1, 1]
+      eta_mins: [0.0003, 1e-06]
+    ]
+    mixing_augs:[
+      mixup: False
+      mixup_beta: 1.2
+      use_identity: True
+    ]
+    optim_g:[
+      type: AdamW
+      lr: 0.0003
+      weight_decay: 0.0001
+      betas: [0.9, 0.999]
+    ]
+    pixel_opt:[
+      type: L1Loss
+      loss_weight: 1
+      reduction: mean
+    ]
+  ]
+  val:[
+    window_size: 8
+    val_freq: 4000.0
+    save_img: False
+    rgb2bgr: True
+    use_image: False
+    max_minibatch: 8
+    metrics:[
+      psnr:[
+        type: calculate_psnr
+        crop_border: 0
+        test_y_channel: False
+      ]
+    ]
+  ]
+  logger:[
+    print_freq: 1000
+    save_checkpoint_freq: 4000.0
+    use_tb_logger: True
+    wandb:[
+      project: None
+      resume_id: None
+    ]
+  ]
+  is_train: True
+  dist: False
+  rank: 0
+  world_size: 1
+
+2025-04-17 20:55:36,425 INFO: Dataset Dataset_PairedImage - TrainSet is created.
+2025-04-17 20:55:36,426 INFO: Training statistics:
+	Number of train images: 7000
+	Dataset enlarge ratio: 1
+	Batch size per gpu: 8
+	World size (gpu number): 1
+	Require iter number per epoch: 875
+	Total epochs: 522; iters: 456000.
+2025-04-17 20:55:36,434 INFO: Dataset Dataset_PairedImage - ValSet is created.
+2025-04-17 20:55:36,434 INFO: Number of val images/folders in ValSet: 74
+2025-04-17 20:55:39,872 INFO: Network: Restormer, with parameters: 26,126,644
+2025-04-17 20:55:39,872 INFO: Restormer(
+  (patch_embed): OverlapPatchEmbed(
+    (proj): Conv2d(3, 48, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  )
+  (encoder_level1): Sequential(
+    (0): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(48, 144, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(144, 144, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=144, bias=False)
+        (project_out): Conv2d(48, 48, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(48, 254, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(254, 254, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=254, bias=False)
+        (project_out): Conv2d(127, 48, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (1): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(48, 144, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(144, 144, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=144, bias=False)
+        (project_out): Conv2d(48, 48, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(48, 254, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(254, 254, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=254, bias=False)
+        (project_out): Conv2d(127, 48, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (2): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(48, 144, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(144, 144, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=144, bias=False)
+        (project_out): Conv2d(48, 48, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(48, 254, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(254, 254, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=254, bias=False)
+        (project_out): Conv2d(127, 48, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (3): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(48, 144, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(144, 144, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=144, bias=False)
+        (project_out): Conv2d(48, 48, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(48, 254, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(254, 254, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=254, bias=False)
+        (project_out): Conv2d(127, 48, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+  )
+  (down1_2): Downsample(
+    (body): Sequential(
+      (0): Conv2d(48, 24, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): PixelUnshuffle(downscale_factor=2)
+    )
+  )
+  (encoder_level2): Sequential(
+    (0): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (1): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (2): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (3): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (4): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (5): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+  )
+  (down2_3): Downsample(
+    (body): Sequential(
+      (0): Conv2d(96, 48, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): PixelUnshuffle(downscale_factor=2)
+    )
+  )
+  (encoder_level3): Sequential(
+    (0): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (1): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (2): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (3): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (4): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (5): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+  )
+  (down3_4): Downsample(
+    (body): Sequential(
+      (0): Conv2d(192, 96, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): PixelUnshuffle(downscale_factor=2)
+    )
+  )
+  (latent): Sequential(
+    (0): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(384, 1152, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(1152, 1152, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1152, bias=False)
+        (project_out): Conv2d(384, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(384, 2042, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(2042, 2042, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2042, bias=False)
+        (project_out): Conv2d(1021, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (1): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(384, 1152, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(1152, 1152, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1152, bias=False)
+        (project_out): Conv2d(384, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(384, 2042, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(2042, 2042, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2042, bias=False)
+        (project_out): Conv2d(1021, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (2): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(384, 1152, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(1152, 1152, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1152, bias=False)
+        (project_out): Conv2d(384, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(384, 2042, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(2042, 2042, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2042, bias=False)
+        (project_out): Conv2d(1021, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (3): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(384, 1152, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(1152, 1152, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1152, bias=False)
+        (project_out): Conv2d(384, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(384, 2042, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(2042, 2042, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2042, bias=False)
+        (project_out): Conv2d(1021, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (4): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(384, 1152, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(1152, 1152, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1152, bias=False)
+        (project_out): Conv2d(384, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(384, 2042, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(2042, 2042, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2042, bias=False)
+        (project_out): Conv2d(1021, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (5): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(384, 1152, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(1152, 1152, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1152, bias=False)
+        (project_out): Conv2d(384, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(384, 2042, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(2042, 2042, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2042, bias=False)
+        (project_out): Conv2d(1021, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (6): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(384, 1152, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(1152, 1152, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1152, bias=False)
+        (project_out): Conv2d(384, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(384, 2042, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(2042, 2042, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2042, bias=False)
+        (project_out): Conv2d(1021, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (7): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(384, 1152, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(1152, 1152, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1152, bias=False)
+        (project_out): Conv2d(384, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(384, 2042, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(2042, 2042, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2042, bias=False)
+        (project_out): Conv2d(1021, 384, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+  )
+  (up4_3): Upsample(
+    (body): Sequential(
+      (0): Conv2d(384, 768, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): PixelShuffle(upscale_factor=2)
+    )
+  )
+  (reduce_chan_level3): Conv2d(384, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+  (decoder_level3): Sequential(
+    (0): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (1): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (2): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (3): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (4): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (5): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(192, 576, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(576, 576, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=576, bias=False)
+        (project_out): Conv2d(192, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(192, 1020, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(1020, 1020, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=1020, bias=False)
+        (project_out): Conv2d(510, 192, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+  )
+  (up3_2): Upsample(
+    (body): Sequential(
+      (0): Conv2d(192, 384, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): PixelShuffle(upscale_factor=2)
+    )
+  )
+  (reduce_chan_level2): Conv2d(192, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+  (decoder_level2): Sequential(
+    (0): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (1): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (2): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (3): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (4): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (5): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+  )
+  (up2_1): Upsample(
+    (body): Sequential(
+      (0): Conv2d(96, 192, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): PixelShuffle(upscale_factor=2)
+    )
+  )
+  (decoder_level1): Sequential(
+    (0): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (1): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (2): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (3): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+  )
+  (refinement): Sequential(
+    (0): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (1): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (2): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+    (3): TransformerBlock(
+      (norm1): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (attn): Attention(
+        (qkv): Conv2d(96, 288, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (qkv_dwconv): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=288, bias=False)
+        (project_out): Conv2d(96, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+      (norm2): LayerNorm(
+        (body): WithBias_LayerNorm()
+      )
+      (ffn): FeedForward(
+        (project_in): Conv2d(96, 510, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (dwconv): Conv2d(510, 510, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=510, bias=False)
+        (project_out): Conv2d(255, 96, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      )
+    )
+  )
+  (output): Conv2d(96, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+)
+2025-04-17 20:55:39,950 INFO: Model [ImageCleanModel] is created.
+2025-04-17 20:55:55,872 INFO: Start training from epoch: 0, iter: 0
+2025-04-17 20:56:08,742 INFO: 
+ Updating Patch_Size to 128 and Batch_Size to 6 
+
+2025-04-17 21:06:13,522 INFO: [Defoc..][epoch:  1, iter:   1,000, lr:(3.000e-04,)] [eta: 3 days, 7:59:46, time (data): 0.569 (0.004)] l_pix: 3.1379e-02 
+2025-04-17 21:16:17,446 INFO: [Defoc..][epoch:  2, iter:   2,000, lr:(3.000e-04,)] [eta: 3 days, 5:59:30, time (data): 0.830 (0.005)] l_pix: 3.7662e-02 
+2025-04-17 21:27:35,857 INFO: [Defoc..][epoch:  3, iter:   3,000, lr:(3.000e-04,)] [eta: 3 days, 8:20:04, time (data): 0.632 (0.005)] l_pix: 4.0916e-02 
+2025-04-17 21:39:20,953 INFO: [Defoc..][epoch:  4, iter:   4,000, lr:(3.000e-04,)] [eta: 3 days, 10:14:58, time (data): 0.723 (0.006)] l_pix: 4.4044e-02 
+2025-04-17 21:39:20,954 INFO: Saving models and training states.
+2025-04-17 21:39:37,651 INFO: Validation ValSet,		 # psnr: 23.7150
+2025-04-17 21:53:47,937 INFO: [Defoc..][epoch:  5, iter:   5,000, lr:(3.000e-04,)] [eta: 3 days, 15:22:32, time (data): 0.827 (0.003)] l_pix: 3.9012e-02 
+2025-04-17 22:08:41,312 INFO: [Defoc..][epoch:  6, iter:   6,000, lr:(3.000e-04,)] [eta: 3 days, 19:15:46, time (data): 0.908 (0.003)] l_pix: 6.4453e-02 
+2025-04-17 22:23:45,247 INFO: [Defoc..][epoch:  7, iter:   7,000, lr:(3.000e-04,)] [eta: 3 days, 22:09:24, time (data): 0.926 (0.003)] l_pix: 2.9230e-02 
+2025-04-17 22:38:23,158 INFO: [Defoc..][epoch:  9, iter:   8,000, lr:(3.000e-04,)] [eta: 3 days, 23:51:35, time (data): 0.891 (0.003)] l_pix: 4.0687e-02 
+2025-04-17 22:38:23,158 INFO: Saving models and training states.
+2025-04-17 22:38:38,989 INFO: Validation ValSet,		 # psnr: 23.7236
+2025-04-17 22:53:43,143 INFO: [Defoc..][epoch: 10, iter:   9,000, lr:(3.000e-04,)] [eta: 4 days, 1:42:38, time (data): 0.662 (0.003)] l_pix: 7.0228e-02 
+2025-04-17 23:08:51,864 INFO: [Defoc..][epoch: 11, iter:  10,000, lr:(3.000e-04,)] [eta: 4 days, 3:00:02, time (data): 0.970 (0.003)] l_pix: 9.2552e-02 
+2025-04-17 23:23:39,293 INFO: [Defoc..][epoch: 12, iter:  11,000, lr:(3.000e-04,)] [eta: 4 days, 3:46:16, time (data): 0.861 (0.003)] l_pix: 3.2118e-02 
+2025-04-17 23:39:03,456 INFO: [Defoc..][epoch: 13, iter:  12,000, lr:(3.000e-04,)] [eta: 4 days, 4:44:58, time (data): 0.908 (0.010)] l_pix: 4.2513e-02 
+2025-04-17 23:39:03,456 INFO: Saving models and training states.
+2025-04-17 23:39:18,877 INFO: Validation ValSet,		 # psnr: 24.2243
+2025-04-17 23:54:12,435 INFO: [Defoc..][epoch: 14, iter:  13,000, lr:(3.000e-04,)] [eta: 4 days, 5:23:39, time (data): 0.848 (0.005)] l_pix: 6.0712e-02 
+2025-04-18 00:09:06,989 INFO: [Defoc..][epoch: 15, iter:  14,000, lr:(3.000e-04,)] [eta: 4 days, 5:47:03, time (data): 0.826 (0.003)] l_pix: 3.7313e-02 
+2025-04-18 00:23:43,355 INFO: [Defoc..][epoch: 17, iter:  15,000, lr:(3.000e-04,)] [eta: 4 days, 5:56:26, time (data): 0.777 (0.003)] l_pix: 8.9875e-02 
+2025-04-18 00:38:19,418 INFO: [Defoc..][epoch: 18, iter:  16,000, lr:(3.000e-04,)] [eta: 4 days, 6:02:41, time (data): 0.902 (0.012)] l_pix: 3.7169e-02 
+2025-04-18 00:38:19,419 INFO: Saving models and training states.
+2025-04-18 00:38:34,033 INFO: Validation ValSet,		 # psnr: 24.4395
+2025-04-18 00:53:42,047 INFO: [Defoc..][epoch: 19, iter:  17,000, lr:(3.000e-04,)] [eta: 4 days, 6:26:31, time (data): 0.989 (0.005)] l_pix: 3.1922e-02 
+2025-04-18 01:08:40,071 INFO: [Defoc..][epoch: 20, iter:  18,000, lr:(3.000e-04,)] [eta: 4 days, 6:36:01, time (data): 0.918 (0.003)] l_pix: 2.2577e-02 
+2025-04-18 01:23:13,969 INFO: [Defoc..][epoch: 21, iter:  19,000, lr:(3.000e-04,)] [eta: 4 days, 6:33:42, time (data): 0.832 (0.003)] l_pix: 6.1314e-02 
+2025-04-18 01:37:31,901 INFO: [Defoc..][epoch: 22, iter:  20,000, lr:(3.000e-04,)] [eta: 4 days, 6:24:21, time (data): 0.833 (0.004)] l_pix: 8.1670e-02 
+2025-04-18 01:37:31,901 INFO: Saving models and training states.
+2025-04-18 01:37:46,821 INFO: Validation ValSet,		 # psnr: 24.0843
+2025-04-18 01:52:15,371 INFO: [Defoc..][epoch: 23, iter:  21,000, lr:(3.000e-04,)] [eta: 4 days, 6:23:21, time (data): 0.879 (0.003)] l_pix: 3.7550e-02 
+2025-04-18 02:06:39,819 INFO: [Defoc..][epoch: 25, iter:  22,000, lr:(3.000e-04,)] [eta: 4 days, 6:14:50, time (data): 0.851 (0.004)] l_pix: 3.5308e-02 
+2025-04-18 02:21:10,104 INFO: [Defoc..][epoch: 26, iter:  23,000, lr:(3.000e-04,)] [eta: 4 days, 6:07:39, time (data): 0.888 (0.007)] l_pix: 4.8174e-02 
+2025-04-18 02:35:37,534 INFO: [Defoc..][epoch: 27, iter:  24,000, lr:(3.000e-04,)] [eta: 4 days, 5:59:00, time (data): 0.839 (0.004)] l_pix: 3.7391e-02 
+2025-04-18 02:35:37,535 INFO: Saving models and training states.
+2025-04-18 02:35:51,400 INFO: Validation ValSet,		 # psnr: 24.7679
+2025-04-18 02:50:26,853 INFO: [Defoc..][epoch: 28, iter:  25,000, lr:(3.000e-04,)] [eta: 4 days, 5:56:10, time (data): 0.900 (0.003)] l_pix: 2.9373e-02 
+2025-04-18 03:04:48,130 INFO: [Defoc..][epoch: 29, iter:  26,000, lr:(3.000e-04,)] [eta: 4 days, 5:44:41, time (data): 0.897 (0.013)] l_pix: 4.3313e-02 
+2025-04-18 03:19:15,054 INFO: [Defoc..][epoch: 30, iter:  27,000, lr:(3.000e-04,)] [eta: 4 days, 5:34:30, time (data): 0.877 (0.010)] l_pix: 4.2404e-02 
+2025-04-18 03:33:41,317 INFO: [Defoc..][epoch: 31, iter:  28,000, lr:(3.000e-04,)] [eta: 4 days, 5:23:49, time (data): 0.871 (0.003)] l_pix: 3.6181e-02 
+2025-04-18 03:33:41,318 INFO: Saving models and training states.
+2025-04-18 03:33:56,707 INFO: Validation ValSet,		 # psnr: 24.7535
+2025-04-18 03:48:20,879 INFO: [Defoc..][epoch: 33, iter:  29,000, lr:(3.000e-04,)] [eta: 4 days, 5:16:09, time (data): 0.911 (0.004)] l_pix: 4.1093e-02 
+2025-04-18 04:02:48,118 INFO: [Defoc..][epoch: 34, iter:  30,000, lr:(3.000e-04,)] [eta: 4 days, 5:05:07, time (data): 0.951 (0.006)] l_pix: 3.4346e-02 
+2025-04-18 04:16:51,135 INFO: [Defoc..][epoch: 35, iter:  31,000, lr:(3.000e-04,)] [eta: 4 days, 4:48:18, time (data): 0.973 (0.003)] l_pix: 3.9232e-02 
+2025-04-18 04:31:08,629 INFO: [Defoc..][epoch: 36, iter:  32,000, lr:(3.000e-04,)] [eta: 4 days, 4:34:52, time (data): 1.025 (0.003)] l_pix: 3.6195e-02 
+2025-04-18 04:31:08,630 INFO: Saving models and training states.
+2025-04-18 04:31:21,877 INFO: Validation ValSet,		 # psnr: 24.4700
+2025-04-18 04:45:39,303 INFO: [Defoc..][epoch: 37, iter:  33,000, lr:(3.000e-04,)] [eta: 4 days, 4:24:12, time (data): 0.840 (0.006)] l_pix: 5.1533e-02 
+2025-04-18 04:59:38,479 INFO: [Defoc..][epoch: 38, iter:  34,000, lr:(3.000e-04,)] [eta: 4 days, 4:06:47, time (data): 0.859 (0.003)] l_pix: 4.8962e-02 
+2025-04-18 05:13:47,454 INFO: [Defoc..][epoch: 39, iter:  35,000, lr:(3.000e-04,)] [eta: 4 days, 3:51:32, time (data): 0.888 (0.004)] l_pix: 3.1352e-02 
+2025-04-18 05:27:51,389 INFO: [Defoc..][epoch: 41, iter:  36,000, lr:(3.000e-04,)] [eta: 4 days, 3:35:22, time (data): 0.867 (0.003)] l_pix: 2.8410e-02 
+2025-04-18 05:27:51,390 INFO: Saving models and training states.
+2025-04-18 05:28:04,688 INFO: Validation ValSet,		 # psnr: 24.8369
+2025-04-18 05:42:07,616 INFO: [Defoc..][epoch: 42, iter:  37,000, lr:(3.000e-04,)] [eta: 4 days, 3:21:38, time (data): 0.742 (0.004)] l_pix: 3.5082e-02 
+2025-04-18 05:56:04,653 INFO: [Defoc..][epoch: 43, iter:  38,000, lr:(3.000e-04,)] [eta: 4 days, 3:04:21, time (data): 0.766 (0.004)] l_pix: 3.0697e-02 
+2025-04-18 06:10:00,246 INFO: [Defoc..][epoch: 44, iter:  39,000, lr:(3.000e-04,)] [eta: 4 days, 2:46:59, time (data): 0.814 (0.006)] l_pix: 4.7394e-02 
+2025-04-18 06:23:41,855 INFO: [Defoc..][epoch: 45, iter:  40,000, lr:(3.000e-04,)] [eta: 4 days, 2:27:22, time (data): 0.768 (0.003)] l_pix: 3.1478e-02 
+2025-04-18 06:23:41,856 INFO: Saving models and training states.
+2025-04-18 06:23:56,078 INFO: Validation ValSet,		 # psnr: 24.5802
+2025-04-18 06:37:51,419 INFO: [Defoc..][epoch: 46, iter:  41,000, lr:(3.000e-04,)] [eta: 4 days, 2:12:45, time (data): 0.818 (0.004)] l_pix: 3.8636e-02 
+2025-04-18 06:51:36,719 INFO: [Defoc..][epoch: 47, iter:  42,000, lr:(3.000e-04,)] [eta: 4 days, 1:54:10, time (data): 0.884 (0.003)] l_pix: 3.0172e-02 
+2025-04-18 07:05:55,118 INFO: [Defoc..][epoch: 49, iter:  43,000, lr:(3.000e-04,)] [eta: 4 days, 1:41:06, time (data): 0.792 (0.003)] l_pix: 3.9296e-02 
+2025-04-18 07:19:40,319 INFO: [Defoc..][epoch: 50, iter:  44,000, lr:(3.000e-04,)] [eta: 4 days, 1:22:49, time (data): 0.787 (0.003)] l_pix: 3.8409e-02 
+2025-04-18 07:19:40,319 INFO: Saving models and training states.
+2025-04-18 07:19:55,698 INFO: Validation ValSet,		 # psnr: 24.8093
+2025-04-18 07:34:00,220 INFO: [Defoc..][epoch: 51, iter:  45,000, lr:(3.000e-04,)] [eta: 4 days, 1:10:00, time (data): 0.796 (0.003)] l_pix: 3.9429e-02 
+2025-04-18 07:48:15,969 INFO: [Defoc..][epoch: 52, iter:  46,000, lr:(3.000e-04,)] [eta: 4 days, 0:56:30, time (data): 0.939 (0.003)] l_pix: 3.7366e-02 
+2025-04-18 08:03:22,290 INFO: [Defoc..][epoch: 53, iter:  47,000, lr:(3.000e-04,)] [eta: 4 days, 0:50:19, time (data): 0.754 (0.004)] l_pix: 3.5967e-02 
+2025-04-18 08:18:08,752 INFO: [Defoc..][epoch: 54, iter:  48,000, lr:(3.000e-04,)] [eta: 4 days, 0:40:56, time (data): 0.987 (0.003)] l_pix: 3.0019e-02 
+2025-04-18 08:18:08,752 INFO: Saving models and training states.
+2025-04-18 08:18:23,553 INFO: Validation ValSet,		 # psnr: 24.8505
+2025-04-18 08:33:30,770 INFO: [Defoc..][epoch: 55, iter:  49,000, lr:(3.000e-04,)] [eta: 4 days, 0:36:16, time (data): 0.869 (0.004)] l_pix: 3.7458e-02 
+2025-04-18 08:48:53,525 INFO: [Defoc..][epoch: 57, iter:  50,000, lr:(3.000e-04,)] [eta: 4 days, 0:31:16, time (data): 0.915 (0.004)] l_pix: 3.8024e-02 
+2025-04-18 09:04:11,926 INFO: [Defoc..][epoch: 58, iter:  51,000, lr:(3.000e-04,)] [eta: 4 days, 0:25:16, time (data): 0.880 (0.004)] l_pix: 5.6456e-02 
+2025-04-18 09:19:43,294 INFO: [Defoc..][epoch: 59, iter:  52,000, lr:(3.000e-04,)] [eta: 4 days, 0:20:36, time (data): 0.935 (0.004)] l_pix: 3.5001e-02 
+2025-04-18 09:19:43,294 INFO: Saving models and training states.
+2025-04-18 09:20:00,813 INFO: Validation ValSet,		 # psnr: 24.4693
+2025-04-18 09:35:39,440 INFO: [Defoc..][epoch: 60, iter:  53,000, lr:(3.000e-04,)] [eta: 4 days, 0:18:40, time (data): 0.923 (0.003)] l_pix: 2.9895e-02 
+2025-04-18 09:51:29,893 INFO: [Defoc..][epoch: 61, iter:  54,000, lr:(3.000e-04,)] [eta: 4 days, 0:15:31, time (data): 1.000 (0.006)] l_pix: 4.7875e-02 
+2025-04-18 10:07:18,418 INFO: [Defoc..][epoch: 62, iter:  55,000, lr:(3.000e-04,)] [eta: 4 days, 0:11:39, time (data): 0.938 (0.004)] l_pix: 4.3563e-02 
+2025-04-18 10:23:19,454 INFO: [Defoc..][epoch: 63, iter:  56,000, lr:(3.000e-04,)] [eta: 4 days, 0:08:52, time (data): 0.868 (0.004)] l_pix: 3.8761e-02 
+2025-04-18 10:23:19,455 INFO: Saving models and training states.
+2025-04-18 10:23:34,257 INFO: Validation ValSet,		 # psnr: 24.8439
+2025-04-18 10:38:53,790 INFO: [Defoc..][epoch: 65, iter:  57,000, lr:(3.000e-04,)] [eta: 4 days, 0:02:29, time (data): 0.844 (0.003)] l_pix: 3.4663e-02 
+2025-04-18 10:54:30,849 INFO: [Defoc..][epoch: 66, iter:  58,000, lr:(3.000e-04,)] [eta: 3 days, 23:56:07, time (data): 0.629 (0.012)] l_pix: 1.8054e-02 
+2025-04-18 11:10:20,765 INFO: [Defoc..][epoch: 67, iter:  59,000, lr:(3.000e-04,)] [eta: 3 days, 23:50:52, time (data): 0.929 (0.003)] l_pix: 3.3780e-02 
+2025-04-18 11:26:00,549 INFO: [Defoc..][epoch: 68, iter:  60,000, lr:(3.000e-04,)] [eta: 3 days, 23:44:09, time (data): 0.894 (0.003)] l_pix: 3.4970e-02 
+2025-04-18 11:26:00,550 INFO: Saving models and training states.
+2025-04-18 11:26:16,372 INFO: Validation ValSet,		 # psnr: 24.8398
+2025-04-18 11:42:00,606 INFO: [Defoc..][epoch: 69, iter:  61,000, lr:(3.000e-04,)] [eta: 3 days, 23:39:20, time (data): 0.927 (0.003)] l_pix: 4.3168e-02 
+2025-04-18 11:57:41,352 INFO: [Defoc..][epoch: 70, iter:  62,000, lr:(3.000e-04,)] [eta: 3 days, 23:32:06, time (data): 0.952 (0.003)] l_pix: 2.4058e-02 
+2025-04-18 12:13:12,916 INFO: [Defoc..][epoch: 71, iter:  63,000, lr:(3.000e-04,)] [eta: 3 days, 23:23:39, time (data): 0.913 (0.004)] l_pix: 2.9801e-02 
+2025-04-18 12:29:19,298 INFO: [Defoc..][epoch: 73, iter:  64,000, lr:(3.000e-04,)] [eta: 3 days, 23:18:32, time (data): 0.922 (0.003)] l_pix: 6.1417e-02 
+2025-04-18 12:29:19,298 INFO: Saving models and training states.
+2025-04-18 12:29:34,675 INFO: Validation ValSet,		 # psnr: 24.9595
+2025-04-18 12:43:24,320 INFO: [Defoc..][epoch: 74, iter:  65,000, lr:(3.000e-04,)] [eta: 3 days, 23:00:54, time (data): 0.754 (0.004)] l_pix: 4.5915e-02 
+2025-04-18 12:56:03,965 INFO: [Defoc..][epoch: 75, iter:  66,000, lr:(3.000e-04,)] [eta: 3 days, 22:34:59, time (data): 0.703 (0.003)] l_pix: 3.8511e-02 
+2025-04-18 13:08:12,772 INFO: [Defoc..][epoch: 76, iter:  67,000, lr:(3.000e-04,)] [eta: 3 days, 22:06:28, time (data): 0.705 (0.004)] l_pix: 3.9369e-02 
+2025-04-18 13:20:04,571 INFO: [Defoc..][epoch: 77, iter:  68,000, lr:(3.000e-04,)] [eta: 3 days, 21:36:49, time (data): 0.723 (0.013)] l_pix: 4.9570e-02 
+2025-04-18 13:20:04,572 INFO: Saving models and training states.
+2025-04-18 13:20:18,161 INFO: Validation ValSet,		 # psnr: 24.8144
+2025-04-18 13:32:18,628 INFO: [Defoc..][epoch: 78, iter:  69,000, lr:(3.000e-04,)] [eta: 3 days, 21:09:46, time (data): 0.701 (0.005)] l_pix: 3.1549e-02 
+2025-04-18 13:43:59,824 INFO: [Defoc..][epoch: 79, iter:  70,000, lr:(3.000e-04,)] [eta: 3 days, 20:40:07, time (data): 0.705 (0.004)] l_pix: 3.0654e-02 
+2025-04-18 13:55:40,000 INFO: [Defoc..][epoch: 81, iter:  71,000, lr:(3.000e-04,)] [eta: 3 days, 20:10:53, time (data): 0.713 (0.003)] l_pix: 3.7287e-02 
+2025-04-18 14:08:48,978 INFO: [Defoc..][epoch: 82, iter:  72,000, lr:(3.000e-04,)] [eta: 3 days, 19:50:02, time (data): 0.835 (0.006)] l_pix: 4.6247e-02 
+2025-04-18 14:08:48,978 INFO: Saving models and training states.
+2025-04-18 14:09:03,228 INFO: Validation ValSet,		 # psnr: 25.0304
+2025-04-18 14:23:33,809 INFO: [Defoc..][epoch: 83, iter:  73,000, lr:(3.000e-04,)] [eta: 3 days, 19:37:47, time (data): 0.851 (0.007)] l_pix: 5.0723e-02 
+2025-04-18 14:38:23,937 INFO: [Defoc..][epoch: 84, iter:  74,000, lr:(3.000e-04,)] [eta: 3 days, 19:25:54, time (data): 0.957 (0.003)] l_pix: 2.5271e-02 
+2025-04-18 14:53:19,788 INFO: [Defoc..][epoch: 85, iter:  75,000, lr:(3.000e-04,)] [eta: 3 days, 19:14:26, time (data): 0.905 (0.008)] l_pix: 3.8716e-02 
+2025-04-18 15:07:43,281 INFO: [Defoc..][epoch: 86, iter:  76,000, lr:(3.000e-04,)] [eta: 3 days, 19:00:11, time (data): 0.789 (0.003)] l_pix: 3.9686e-02 
+2025-04-18 15:07:43,282 INFO: Saving models and training states.
+2025-04-18 15:07:57,259 INFO: Validation ValSet,		 # psnr: 24.7873
+2025-04-18 15:21:41,289 INFO: [Defoc..][epoch: 87, iter:  77,000, lr:(3.000e-04,)] [eta: 3 days, 18:43:50, time (data): 0.813 (0.003)] l_pix: 5.8771e-02 
+2025-04-18 15:36:23,732 INFO: [Defoc..][epoch: 89, iter:  78,000, lr:(3.000e-04,)] [eta: 3 days, 18:31:08, time (data): 0.949 (0.004)] l_pix: 2.8664e-02 
+2025-04-18 15:51:49,636 INFO: [Defoc..][epoch: 90, iter:  79,000, lr:(3.000e-04,)] [eta: 3 days, 18:21:51, time (data): 0.885 (0.004)] l_pix: 3.4594e-02 
+2025-04-18 16:07:15,469 INFO: [Defoc..][epoch: 91, iter:  80,000, lr:(3.000e-04,)] [eta: 3 days, 18:12:24, time (data): 0.806 (0.003)] l_pix: 3.7747e-02 
+2025-04-18 16:07:15,470 INFO: Saving models and training states.
+2025-04-18 16:07:31,330 INFO: Validation ValSet,		 # psnr: 24.9597
+2025-04-18 16:22:32,857 INFO: [Defoc..][epoch: 92, iter:  81,000, lr:(3.000e-04,)] [eta: 3 days, 18:02:08, time (data): 0.914 (0.008)] l_pix: 3.3910e-02 
+2025-04-18 16:37:48,545 INFO: [Defoc..][epoch: 93, iter:  82,000, lr:(3.000e-04,)] [eta: 3 days, 17:51:38, time (data): 0.911 (0.008)] l_pix: 3.4789e-02 
+2025-04-18 16:53:13,729 INFO: [Defoc..][epoch: 94, iter:  83,000, lr:(3.000e-04,)] [eta: 3 days, 17:41:44, time (data): 0.689 (0.004)] l_pix: 2.9369e-02 
+2025-04-18 17:08:52,341 INFO: [Defoc..][epoch: 95, iter:  84,000, lr:(3.000e-04,)] [eta: 3 days, 17:32:41, time (data): 0.999 (0.004)] l_pix: 4.2808e-02 
+2025-04-18 17:08:52,342 INFO: Saving models and training states.
+2025-04-18 17:09:09,320 INFO: Validation ValSet,		 # psnr: 25.0377
+2025-04-18 17:24:36,217 INFO: [Defoc..][epoch: 97, iter:  85,000, lr:(3.000e-04,)] [eta: 3 days, 17:23:52, time (data): 0.907 (0.003)] l_pix: 4.0744e-02 
+2025-04-18 17:40:28,225 INFO: [Defoc..][epoch: 98, iter:  86,000, lr:(3.000e-04,)] [eta: 3 days, 17:15:28, time (data): 0.887 (0.003)] l_pix: 2.5502e-02 
+2025-04-18 17:56:18,889 INFO: [Defoc..][epoch: 99, iter:  87,000, lr:(3.000e-04,)] [eta: 3 days, 17:06:48, time (data): 0.952 (0.003)] l_pix: 3.0023e-02 
+2025-04-18 18:11:58,264 INFO: [Defoc..][epoch:100, iter:  88,000, lr:(3.000e-04,)] [eta: 3 days, 16:57:12, time (data): 0.924 (0.003)] l_pix: 3.5700e-02 
+2025-04-18 18:11:58,265 INFO: Saving models and training states.
+2025-04-18 18:12:14,719 INFO: Validation ValSet,		 # psnr: 24.8481
+2025-04-18 18:28:01,685 INFO: [Defoc..][epoch:101, iter:  89,000, lr:(3.000e-04,)] [eta: 3 days, 16:49:06, time (data): 0.927 (0.012)] l_pix: 2.6729e-02 
+2025-04-18 18:44:00,884 INFO: [Defoc..][epoch:102, iter:  90,000, lr:(3.000e-04,)] [eta: 3 days, 16:40:32, time (data): 0.963 (0.004)] l_pix: 5.8714e-02 
+2025-04-18 19:00:14,652 INFO: [Defoc..][epoch:103, iter:  91,000, lr:(3.000e-04,)] [eta: 3 days, 16:32:47, time (data): 0.960 (0.003)] l_pix: 4.3234e-02 
+2025-04-18 19:16:29,174 INFO: [Defoc..][epoch:105, iter:  92,000, lr:(3.000e-04,)] [eta: 3 days, 16:24:54, time (data): 1.015 (0.003)] l_pix: 3.3437e-02 
+2025-04-18 19:16:29,175 INFO: Saving models and training states.
+2025-04-18 19:16:46,220 INFO: Validation ValSet,		 # psnr: 25.1070
+2025-04-18 19:33:15,848 INFO: [Defoc..][epoch:106, iter:  93,000, lr:(3.000e-04,)] [eta: 3 days, 16:18:56, time (data): 1.002 (0.004)] l_pix: 2.7257e-02 
+2025-04-18 19:49:27,592 INFO: [Defoc..][epoch:107, iter:  94,000, lr:(3.000e-04,)] [eta: 3 days, 16:10:29, time (data): 1.005 (0.004)] l_pix: 4.1977e-02 
+2025-04-18 20:05:22,628 INFO: [Defoc..][epoch:108, iter:  95,000, lr:(3.000e-04,)] [eta: 3 days, 16:00:49, time (data): 0.810 (0.005)] l_pix: 5.3711e-02 
+2025-04-18 20:21:10,480 INFO: [Defoc..][epoch:109, iter:  96,000, lr:(3.000e-04,)] [eta: 3 days, 15:50:35, time (data): 0.995 (0.010)] l_pix: 2.3085e-02 
+2025-04-18 20:21:10,481 INFO: Saving models and training states.
+2025-04-18 20:21:26,166 INFO: Validation ValSet,		 # psnr: 25.1846
+2025-04-18 20:37:29,893 INFO: [Defoc..][epoch:110, iter:  97,000, lr:(3.000e-04,)] [eta: 3 days, 15:42:10, time (data): 0.987 (0.007)] l_pix: 3.2631e-02 
+2025-04-18 20:53:27,027 INFO: [Defoc..][epoch:111, iter:  98,000, lr:(3.000e-04,)] [eta: 3 days, 15:32:14, time (data): 0.931 (0.003)] l_pix: 2.0623e-02 
+2025-04-18 21:09:32,987 INFO: [Defoc..][epoch:113, iter:  99,000, lr:(3.000e-04,)] [eta: 3 days, 15:22:43, time (data): 0.915 (0.004)] l_pix: 5.0600e-02 
+2025-04-18 21:25:14,580 INFO: [Defoc..][epoch:114, iter: 100,000, lr:(3.000e-04,)] [eta: 3 days, 15:11:37, time (data): 0.841 (0.003)] l_pix: 1.9246e-02 
+2025-04-18 21:25:14,581 INFO: Saving models and training states.
+2025-04-18 21:25:30,116 INFO: Validation ValSet,		 # psnr: 25.1387
+2025-04-18 21:41:27,022 INFO: [Defoc..][epoch:115, iter: 101,000, lr:(3.000e-04,)] [eta: 3 days, 15:02:14, time (data): 0.895 (0.003)] l_pix: 2.6530e-02 
+2025-04-18 21:57:10,088 INFO: [Defoc..][epoch:116, iter: 102,000, lr:(3.000e-04,)] [eta: 3 days, 14:51:01, time (data): 0.952 (0.004)] l_pix: 1.6475e-02 
+2025-04-18 22:13:18,256 INFO: [Defoc..][epoch:117, iter: 103,000, lr:(3.000e-04,)] [eta: 3 days, 14:41:09, time (data): 1.027 (0.012)] l_pix: 2.8150e-02 
+2025-04-18 22:29:05,141 INFO: [Defoc..][epoch:118, iter: 104,000, lr:(3.000e-04,)] [eta: 3 days, 14:29:58, time (data): 0.903 (0.003)] l_pix: 3.3033e-02 
+2025-04-18 22:29:05,142 INFO: Saving models and training states.
+2025-04-18 22:29:19,301 INFO: Validation ValSet,		 # psnr: 25.0371
+2025-04-18 22:43:03,676 INFO: [Defoc..][epoch:119, iter: 105,000, lr:(3.000e-04,)] [eta: 3 days, 14:12:39, time (data): 0.806 (0.003)] l_pix: 2.4916e-02 
+2025-04-18 22:56:20,992 INFO: [Defoc..][epoch:121, iter: 106,000, lr:(3.000e-04,)] [eta: 3 days, 13:53:08, time (data): 0.816 (0.003)] l_pix: 3.6880e-02 
+2025-04-18 23:09:43,758 INFO: [Defoc..][epoch:122, iter: 107,000, lr:(3.000e-04,)] [eta: 3 days, 13:34:01, time (data): 0.777 (0.012)] l_pix: 3.5721e-02 
+2025-04-18 23:22:37,702 INFO: [Defoc..][epoch:123, iter: 108,000, lr:(3.000e-04,)] [eta: 3 days, 13:13:29, time (data): 0.890 (0.004)] l_pix: 2.3242e-02 
+2025-04-18 23:22:37,703 INFO: Saving models and training states.
+2025-04-18 23:22:50,944 INFO: Validation ValSet,		 # psnr: 25.1411
+2025-04-18 23:35:53,249 INFO: [Defoc..][epoch:124, iter: 109,000, lr:(3.000e-04,)] [eta: 3 days, 12:54:13, time (data): 0.766 (0.003)] l_pix: 3.2904e-02 
+2025-04-18 23:49:07,629 INFO: [Defoc..][epoch:125, iter: 110,000, lr:(3.000e-04,)] [eta: 3 days, 12:35:00, time (data): 0.795 (0.007)] l_pix: 2.0932e-02 
+2025-04-19 00:02:30,775 INFO: [Defoc..][epoch:126, iter: 111,000, lr:(3.000e-04,)] [eta: 3 days, 12:16:21, time (data): 0.822 (0.005)] l_pix: 3.4538e-02 
+2025-04-19 00:15:40,399 INFO: [Defoc..][epoch:127, iter: 112,000, lr:(3.000e-04,)] [eta: 3 days, 11:57:06, time (data): 0.782 (0.003)] l_pix: 4.3781e-02 
+2025-04-19 00:15:40,399 INFO: Saving models and training states.
+2025-04-19 00:15:54,215 INFO: Validation ValSet,		 # psnr: 25.0511
+2025-04-19 00:28:58,217 INFO: [Defoc..][epoch:129, iter: 113,000, lr:(3.000e-04,)] [eta: 3 days, 11:38:22, time (data): 0.806 (0.007)] l_pix: 3.3861e-02 
+2025-04-19 00:42:30,637 INFO: [Defoc..][epoch:130, iter: 114,000, lr:(3.000e-04,)] [eta: 3 days, 11:20:28, time (data): 0.863 (0.003)] l_pix: 3.3494e-02 
+2025-04-19 00:56:11,516 INFO: [Defoc..][epoch:131, iter: 115,000, lr:(3.000e-04,)] [eta: 3 days, 11:03:04, time (data): 0.761 (0.006)] l_pix: 3.1856e-02 
+2025-04-19 01:09:48,855 INFO: [Defoc..][epoch:132, iter: 116,000, lr:(3.000e-04,)] [eta: 3 days, 10:45:33, time (data): 0.784 (0.004)] l_pix: 1.9491e-02 
+2025-04-19 01:09:48,856 INFO: Saving models and training states.
+2025-04-19 01:10:02,184 INFO: Validation ValSet,		 # psnr: 24.9867
+2025-04-19 01:23:35,114 INFO: [Defoc..][epoch:133, iter: 117,000, lr:(3.000e-04,)] [eta: 3 days, 10:28:31, time (data): 0.869 (0.012)] l_pix: 4.7509e-02 
+2025-04-19 01:37:34,965 INFO: [Defoc..][epoch:134, iter: 118,000, lr:(3.000e-04,)] [eta: 3 days, 10:12:12, time (data): 0.831 (0.004)] l_pix: 3.5759e-02 
+2025-04-19 01:52:48,457 INFO: [Defoc..][epoch:135, iter: 119,000, lr:(3.000e-04,)] [eta: 3 days, 9:59:24, time (data): 0.955 (0.003)] l_pix: 4.4018e-02 
+2025-04-19 02:06:32,690 INFO: [Defoc..][epoch:137, iter: 120,000, lr:(3.000e-04,)] [eta: 3 days, 9:42:24, time (data): 0.896 (0.004)] l_pix: 4.2841e-02 
+2025-04-19 02:06:32,690 INFO: Saving models and training states.
+2025-04-19 02:06:46,681 INFO: Validation ValSet,		 # psnr: 25.4330
+2025-04-19 02:20:08,461 INFO: [Defoc..][epoch:138, iter: 121,000, lr:(3.000e-04,)] [eta: 3 days, 9:25:03, time (data): 0.829 (0.003)] l_pix: 2.7522e-02 
+2025-04-19 02:33:23,265 INFO: [Defoc..][epoch:139, iter: 122,000, lr:(3.000e-04,)] [eta: 3 days, 9:06:49, time (data): 0.823 (0.003)] l_pix: 2.4625e-02 
+2025-04-19 02:46:33,933 INFO: [Defoc..][epoch:140, iter: 123,000, lr:(3.000e-04,)] [eta: 3 days, 8:48:28, time (data): 0.743 (0.005)] l_pix: 4.4462e-02 
+2025-04-19 02:59:57,129 INFO: [Defoc..][epoch:141, iter: 124,000, lr:(3.000e-04,)] [eta: 3 days, 8:30:46, time (data): 0.732 (0.005)] l_pix: 2.2847e-02 
+2025-04-19 02:59:57,129 INFO: Saving models and training states.
+2025-04-19 03:00:09,875 INFO: Validation ValSet,		 # psnr: 25.0643
+2025-04-19 03:13:18,523 INFO: [Defoc..][epoch:142, iter: 125,000, lr:(3.000e-04,)] [eta: 3 days, 8:13:03, time (data): 0.766 (0.005)] l_pix: 3.1229e-02 
+2025-04-19 03:26:29,649 INFO: [Defoc..][epoch:143, iter: 126,000, lr:(3.000e-04,)] [eta: 3 days, 7:54:58, time (data): 0.797 (0.003)] l_pix: 2.9231e-02 
+2025-04-19 03:39:50,965 INFO: [Defoc..][epoch:145, iter: 127,000, lr:(3.000e-04,)] [eta: 3 days, 7:37:23, time (data): 0.714 (0.003)] l_pix: 3.3325e-02 
+2025-04-19 03:53:05,804 INFO: [Defoc..][epoch:146, iter: 128,000, lr:(3.000e-04,)] [eta: 3 days, 7:19:36, time (data): 0.816 (0.003)] l_pix: 4.5941e-02 
+2025-04-19 03:53:05,804 INFO: Saving models and training states.
+2025-04-19 03:53:20,580 INFO: Validation ValSet,		 # psnr: 24.9906
+2025-04-19 03:53:20,585 INFO: 
+ Updating Patch_Size to 160 and Batch_Size to 4 
+
+2025-04-19 04:07:17,211 INFO: [Defoc..][epoch:147, iter: 129,000, lr:(3.000e-04,)] [eta: 3 days, 7:04:17, time (data): 0.843 (0.004)] l_pix: 3.1932e-02 
+2025-04-19 04:20:59,195 INFO: [Defoc..][epoch:148, iter: 130,000, lr:(3.000e-04,)] [eta: 3 days, 6:47:45, time (data): 0.771 (0.003)] l_pix: 3.1349e-02 
+2025-04-19 04:34:49,754 INFO: [Defoc..][epoch:149, iter: 131,000, lr:(2.999e-04,)] [eta: 3 days, 6:31:36, time (data): 0.830 (0.010)] l_pix: 2.6832e-02 
+2025-04-19 04:48:27,836 INFO: [Defoc..][epoch:150, iter: 132,000, lr:(2.999e-04,)] [eta: 3 days, 6:14:59, time (data): 0.900 (0.005)] l_pix: 2.9371e-02 
+2025-04-19 04:48:27,837 INFO: Saving models and training states.
+2025-04-19 04:48:41,619 INFO: Validation ValSet,		 # psnr: 25.0258
+2025-04-19 05:02:17,654 INFO: [Defoc..][epoch:151, iter: 133,000, lr:(2.998e-04,)] [eta: 3 days, 5:58:54, time (data): 0.823 (0.003)] l_pix: 3.3204e-02 
+2025-04-19 05:16:12,462 INFO: [Defoc..][epoch:153, iter: 134,000, lr:(2.998e-04,)] [eta: 3 days, 5:43:02, time (data): 0.617 (0.003)] l_pix: 3.0603e-02 
+2025-04-19 05:29:45,504 INFO: [Defoc..][epoch:154, iter: 135,000, lr:(2.997e-04,)] [eta: 3 days, 5:26:20, time (data): 0.801 (0.007)] l_pix: 6.0199e-02 
+2025-04-19 05:43:24,315 INFO: [Defoc..][epoch:155, iter: 136,000, lr:(2.996e-04,)] [eta: 3 days, 5:09:55, time (data): 0.779 (0.004)] l_pix: 2.4339e-02 
+2025-04-19 05:43:24,316 INFO: Saving models and training states.
+2025-04-19 05:43:37,333 INFO: Validation ValSet,		 # psnr: 25.0107
+2025-04-19 05:57:20,916 INFO: [Defoc..][epoch:156, iter: 137,000, lr:(2.994e-04,)] [eta: 3 days, 4:54:14, time (data): 0.839 (0.005)] l_pix: 3.4485e-02 
+2025-04-19 06:11:15,487 INFO: [Defoc..][epoch:157, iter: 138,000, lr:(2.993e-04,)] [eta: 3 days, 4:38:29, time (data): 0.795 (0.009)] l_pix: 4.3856e-02 
+2025-04-19 06:24:57,393 INFO: [Defoc..][epoch:158, iter: 139,000, lr:(2.992e-04,)] [eta: 3 days, 4:22:17, time (data): 0.829 (0.006)] l_pix: 3.2156e-02 
+2025-04-19 06:38:37,626 INFO: [Defoc..][epoch:159, iter: 140,000, lr:(2.990e-04,)] [eta: 3 days, 4:06:03, time (data): 0.871 (0.002)] l_pix: 4.3596e-02 
+2025-04-19 06:38:37,627 INFO: Saving models and training states.
+2025-04-19 06:38:50,314 INFO: Validation ValSet,		 # psnr: 25.1927
+2025-04-19 06:52:38,657 INFO: [Defoc..][epoch:161, iter: 141,000, lr:(2.988e-04,)] [eta: 3 days, 3:50:38, time (data): 0.788 (0.004)] l_pix: 4.0095e-02 
+2025-04-19 07:06:19,867 INFO: [Defoc..][epoch:162, iter: 142,000, lr:(2.987e-04,)] [eta: 3 days, 3:34:31, time (data): 0.826 (0.003)] l_pix: 1.6659e-02 
+2025-04-19 07:20:06,375 INFO: [Defoc..][epoch:163, iter: 143,000, lr:(2.985e-04,)] [eta: 3 days, 3:18:37, time (data): 0.706 (0.003)] l_pix: 2.6891e-02 
+2025-04-19 07:33:41,840 INFO: [Defoc..][epoch:164, iter: 144,000, lr:(2.982e-04,)] [eta: 3 days, 3:02:21, time (data): 0.769 (0.003)] l_pix: 2.8408e-02 
+2025-04-19 07:33:41,840 INFO: Saving models and training states.
+2025-04-19 07:33:56,460 INFO: Validation ValSet,		 # psnr: 24.9548
+2025-04-19 07:47:26,527 INFO: [Defoc..][epoch:165, iter: 145,000, lr:(2.980e-04,)] [eta: 3 days, 2:46:27, time (data): 0.835 (0.005)] l_pix: 1.8487e-02 
+2025-04-19 08:01:07,127 INFO: [Defoc..][epoch:166, iter: 146,000, lr:(2.978e-04,)] [eta: 3 days, 2:30:26, time (data): 0.923 (0.005)] l_pix: 2.4821e-02 
+2025-04-19 08:14:45,977 INFO: [Defoc..][epoch:167, iter: 147,000, lr:(2.975e-04,)] [eta: 3 days, 2:14:23, time (data): 0.804 (0.003)] l_pix: 3.3164e-02 
+2025-04-19 08:28:55,630 INFO: [Defoc..][epoch:169, iter: 148,000, lr:(2.973e-04,)] [eta: 3 days, 1:59:26, time (data): 1.087 (0.006)] l_pix: 2.2913e-02 
+2025-04-19 08:28:55,631 INFO: Saving models and training states.
+2025-04-19 08:29:10,736 INFO: Validation ValSet,		 # psnr: 25.0493
+2025-04-19 08:45:27,986 INFO: [Defoc..][epoch:170, iter: 149,000, lr:(2.970e-04,)] [eta: 3 days, 1:49:24, time (data): 1.022 (0.003)] l_pix: 2.9135e-02 
+2025-04-19 09:01:53,817 INFO: [Defoc..][epoch:171, iter: 150,000, lr:(2.967e-04,)] [eta: 3 days, 1:39:04, time (data): 1.086 (0.003)] l_pix: 3.1606e-02 
+2025-04-19 09:18:03,524 INFO: [Defoc..][epoch:172, iter: 151,000, lr:(2.964e-04,)] [eta: 3 days, 1:28:06, time (data): 0.910 (0.003)] l_pix: 3.4061e-02 
+2025-04-19 09:34:18,967 INFO: [Defoc..][epoch:173, iter: 152,000, lr:(2.961e-04,)] [eta: 3 days, 1:17:15, time (data): 0.850 (0.005)] l_pix: 2.3623e-02 
+2025-04-19 09:34:18,968 INFO: Saving models and training states.
+2025-04-19 09:34:34,460 INFO: Validation ValSet,		 # psnr: 25.2480
+2025-04-19 09:50:34,669 INFO: [Defoc..][epoch:174, iter: 153,000, lr:(2.957e-04,)] [eta: 3 days, 1:06:21, time (data): 1.061 (0.003)] l_pix: 4.0018e-02 
+2025-04-19 10:06:42,725 INFO: [Defoc..][epoch:175, iter: 154,000, lr:(2.954e-04,)] [eta: 3 days, 0:55:07, time (data): 0.827 (0.006)] l_pix: 1.9895e-02 
+2025-04-19 10:22:56,206 INFO: [Defoc..][epoch:177, iter: 155,000, lr:(2.950e-04,)] [eta: 3 days, 0:44:00, time (data): 1.047 (0.004)] l_pix: 5.4774e-02 
+2025-04-19 10:39:11,552 INFO: [Defoc..][epoch:178, iter: 156,000, lr:(2.947e-04,)] [eta: 3 days, 0:32:53, time (data): 1.004 (0.005)] l_pix: 3.7883e-02 
+2025-04-19 10:39:11,553 INFO: Saving models and training states.
+2025-04-19 10:39:27,054 INFO: Validation ValSet,		 # psnr: 25.0422
+2025-04-19 10:56:01,133 INFO: [Defoc..][epoch:179, iter: 157,000, lr:(2.943e-04,)] [eta: 3 days, 0:22:47, time (data): 1.089 (0.004)] l_pix: 3.5816e-02 
+2025-04-19 11:12:20,507 INFO: [Defoc..][epoch:180, iter: 158,000, lr:(2.939e-04,)] [eta: 3 days, 0:11:39, time (data): 1.138 (0.005)] l_pix: 2.3352e-02 
+2025-04-19 11:28:49,289 INFO: [Defoc..][epoch:181, iter: 159,000, lr:(2.935e-04,)] [eta: 3 days, 0:00:45, time (data): 0.883 (0.016)] l_pix: 3.0421e-02 
+2025-04-19 11:45:13,410 INFO: [Defoc..][epoch:182, iter: 160,000, lr:(2.930e-04,)] [eta: 2 days, 23:49:38, time (data): 1.001 (0.004)] l_pix: 5.2000e-02 
+2025-04-19 11:45:13,411 INFO: Saving models and training states.
+2025-04-19 11:45:28,924 INFO: Validation ValSet,		 # psnr: 25.2568
+2025-04-19 12:02:29,569 INFO: [Defoc..][epoch:183, iter: 161,000, lr:(2.926e-04,)] [eta: 2 days, 23:40:02, time (data): 0.901 (0.004)] l_pix: 2.0053e-02 
+2025-04-19 12:19:46,912 INFO: [Defoc..][epoch:185, iter: 162,000, lr:(2.921e-04,)] [eta: 2 days, 23:30:23, time (data): 1.035 (0.006)] l_pix: 3.1630e-02 
+2025-04-19 12:36:18,660 INFO: [Defoc..][epoch:186, iter: 163,000, lr:(2.917e-04,)] [eta: 2 days, 23:19:16, time (data): 1.123 (0.008)] l_pix: 1.9171e-02 
+2025-04-19 12:50:42,211 INFO: [Defoc..][epoch:187, iter: 164,000, lr:(2.912e-04,)] [eta: 2 days, 23:04:17, time (data): 0.791 (0.004)] l_pix: 1.9709e-02 
+2025-04-19 12:50:42,211 INFO: Saving models and training states.
+2025-04-19 12:50:55,857 INFO: Validation ValSet,		 # psnr: 25.1156
+2025-04-19 13:04:17,199 INFO: [Defoc..][epoch:188, iter: 165,000, lr:(2.907e-04,)] [eta: 2 days, 22:47:53, time (data): 0.845 (0.003)] l_pix: 2.3351e-02 
+2025-04-19 13:17:14,673 INFO: [Defoc..][epoch:189, iter: 166,000, lr:(2.902e-04,)] [eta: 2 days, 22:30:25, time (data): 0.777 (0.005)] l_pix: 4.9828e-02 
+2025-04-19 13:29:30,947 INFO: [Defoc..][epoch:190, iter: 167,000, lr:(2.897e-04,)] [eta: 2 days, 22:11:49, time (data): 0.737 (0.004)] l_pix: 4.2505e-02 
+2025-04-19 13:41:56,617 INFO: [Defoc..][epoch:191, iter: 168,000, lr:(2.892e-04,)] [eta: 2 days, 21:53:34, time (data): 0.784 (0.003)] l_pix: 1.9937e-02 
+2025-04-19 13:41:56,617 INFO: Saving models and training states.
+2025-04-19 13:42:10,098 INFO: Validation ValSet,		 # psnr: 25.4584
+2025-04-19 13:56:05,457 INFO: [Defoc..][epoch:193, iter: 169,000, lr:(2.886e-04,)] [eta: 2 days, 21:38:18, time (data): 0.829 (0.004)] l_pix: 1.2963e-02 
+2025-04-19 14:10:46,656 INFO: [Defoc..][epoch:194, iter: 170,000, lr:(2.881e-04,)] [eta: 2 days, 21:23:58, time (data): 0.800 (0.003)] l_pix: 2.5667e-02 
+2025-04-19 14:26:08,700 INFO: [Defoc..][epoch:195, iter: 171,000, lr:(2.875e-04,)] [eta: 2 days, 21:10:45, time (data): 0.913 (0.004)] l_pix: 2.2965e-02 
+2025-04-19 14:41:00,020 INFO: [Defoc..][epoch:196, iter: 172,000, lr:(2.869e-04,)] [eta: 2 days, 20:56:40, time (data): 0.980 (0.003)] l_pix: 3.4717e-02 
+2025-04-19 14:41:00,020 INFO: Saving models and training states.
+2025-04-19 14:41:14,196 INFO: Validation ValSet,		 # psnr: 25.2599
+2025-04-19 14:56:24,520 INFO: [Defoc..][epoch:197, iter: 173,000, lr:(2.863e-04,)] [eta: 2 days, 20:43:29, time (data): 0.906 (0.013)] l_pix: 5.0348e-02 
+2025-04-19 15:11:25,582 INFO: [Defoc..][epoch:198, iter: 174,000, lr:(2.857e-04,)] [eta: 2 days, 20:29:38, time (data): 1.002 (0.002)] l_pix: 3.4152e-02 
+2025-04-19 15:26:42,596 INFO: [Defoc..][epoch:199, iter: 175,000, lr:(2.851e-04,)] [eta: 2 days, 20:16:12, time (data): 1.018 (0.003)] l_pix: 6.4424e-02 
+2025-04-19 15:42:02,358 INFO: [Defoc..][epoch:201, iter: 176,000, lr:(2.845e-04,)] [eta: 2 days, 20:02:49, time (data): 0.908 (0.012)] l_pix: 1.8614e-02 
+2025-04-19 15:42:02,359 INFO: Saving models and training states.
+2025-04-19 15:42:15,999 INFO: Validation ValSet,		 # psnr: 25.2614
+2025-04-19 15:57:18,363 INFO: [Defoc..][epoch:202, iter: 177,000, lr:(2.838e-04,)] [eta: 2 days, 19:49:19, time (data): 0.814 (0.003)] l_pix: 2.0892e-02 
+2025-04-19 16:12:20,401 INFO: [Defoc..][epoch:203, iter: 178,000, lr:(2.832e-04,)] [eta: 2 days, 19:35:26, time (data): 0.894 (0.003)] l_pix: 2.3639e-02 
+2025-04-19 16:27:14,610 INFO: [Defoc..][epoch:204, iter: 179,000, lr:(2.825e-04,)] [eta: 2 days, 19:21:20, time (data): 0.928 (0.004)] l_pix: 5.0054e-02 
+2025-04-19 16:41:39,105 INFO: [Defoc..][epoch:205, iter: 180,000, lr:(2.818e-04,)] [eta: 2 days, 19:06:28, time (data): 0.831 (0.013)] l_pix: 3.7526e-02 
+2025-04-19 16:41:39,106 INFO: Saving models and training states.
+2025-04-19 16:41:53,977 INFO: Validation ValSet,		 # psnr: 25.2141
+2025-04-19 16:56:15,175 INFO: [Defoc..][epoch:206, iter: 181,000, lr:(2.811e-04,)] [eta: 2 days, 18:51:54, time (data): 0.891 (0.009)] l_pix: 4.2310e-02 
+2025-04-19 17:10:47,163 INFO: [Defoc..][epoch:207, iter: 182,000, lr:(2.804e-04,)] [eta: 2 days, 18:37:13, time (data): 0.793 (0.006)] l_pix: 4.1913e-02 
+2025-04-19 17:24:53,628 INFO: [Defoc..][epoch:209, iter: 183,000, lr:(2.797e-04,)] [eta: 2 days, 18:21:55, time (data): 0.712 (0.007)] l_pix: 2.7413e-02 
+2025-04-19 17:38:34,865 INFO: [Defoc..][epoch:210, iter: 184,000, lr:(2.790e-04,)] [eta: 2 days, 18:06:00, time (data): 0.931 (0.005)] l_pix: 3.3277e-02 
+2025-04-19 17:38:34,866 INFO: Saving models and training states.
+2025-04-19 17:38:50,577 INFO: Validation ValSet,		 # psnr: 25.4094
+2025-04-19 17:52:26,749 INFO: [Defoc..][epoch:211, iter: 185,000, lr:(2.783e-04,)] [eta: 2 days, 17:50:22, time (data): 0.850 (0.004)] l_pix: 1.9889e-02 
+2025-04-19 18:07:17,391 INFO: [Defoc..][epoch:212, iter: 186,000, lr:(2.775e-04,)] [eta: 2 days, 17:36:11, time (data): 0.781 (0.004)] l_pix: 2.6752e-02 
+2025-04-19 18:22:19,598 INFO: [Defoc..][epoch:213, iter: 187,000, lr:(2.768e-04,)] [eta: 2 days, 17:22:16, time (data): 1.051 (0.004)] l_pix: 4.5987e-02 
+
+
+2025-04-20 20:15:16,544 INFO: Loading Restormer model from d:\2024_hzf\programs\restormer\experiments\DefocusDeblur_Single_8bit_Restormer_MAX320_642111\models\net_g_184000.pth.
+2025-04-20 20:15:16,756 INFO: Model [ImageCleanModel] is created.
+2025-04-20 20:15:16,802 INFO: Resuming training from epoch: 210, iter: 184000.
+2025-04-20 20:15:29,407 INFO: Start training from epoch: 210, iter: 184000
+2025-04-20 20:15:44,788 INFO: 
+ Updating Patch_Size to 160 and Batch_Size to 4 
+
+2025-04-20 20:32:30,611 INFO: [Defoc..][epoch:211, iter: 185,000, lr:(2.783e-04,)] [eta: 3 days, 5:44:41, time (data): 1.025 (0.004)] l_pix: 1.8934e-02 
+2025-04-20 20:49:21,607 INFO: [Defoc..][epoch:212, iter: 186,000, lr:(2.775e-04,)] [eta: 3 days, 4:38:29, time (data): 0.995 (0.003)] l_pix: 2.4666e-02 
+2025-04-20 21:06:44,837 INFO: [Defoc..][epoch:213, iter: 187,000, lr:(2.768e-04,)] [eta: 3 days, 4:53:20, time (data): 1.063 (0.004)] l_pix: 1.9359e-02 
+2025-04-20 21:23:53,332 INFO: [Defoc..][epoch:214, iter: 188,000, lr:(2.760e-04,)] [eta: 3 days, 4:35:37, time (data): 1.086 (0.003)] l_pix: 1.9684e-02 
+2025-04-20 21:23:53,333 INFO: Saving models and training states.
+2025-04-20 21:24:13,871 INFO: Validation ValSet,		 # psnr: 25.2993
+2025-04-20 21:41:21,983 INFO: [Defoc..][epoch:215, iter: 189,000, lr:(2.752e-04,)] [eta: 3 days, 4:36:04, time (data): 1.186 (0.008)] l_pix: 4.1928e-02 
+2025-04-20 21:58:58,991 INFO: [Defoc..][epoch:216, iter: 190,000, lr:(2.744e-04,)] [eta: 3 days, 4:36:43, time (data): 1.054 (0.003)] l_pix: 2.3090e-02 
+2025-04-20 22:16:05,263 INFO: [Defoc..][epoch:217, iter: 191,000, lr:(2.736e-04,)] [eta: 3 days, 4:12:45, time (data): 0.966 (0.005)] l_pix: 4.7137e-02 
+2025-04-20 22:33:18,681 INFO: [Defoc..][epoch:219, iter: 192,000, lr:(2.728e-04,)] [eta: 3 days, 3:54:26, time (data): 1.056 (0.004)] l_pix: 1.3041e-02 
+2025-04-20 22:33:18,681 INFO: Saving models and training states.
+2025-04-20 22:33:35,148 INFO: Validation ValSet,		 # psnr: 25.3479
+2025-04-20 22:50:16,400 INFO: [Defoc..][epoch:220, iter: 193,000, lr:(2.720e-04,)] [eta: 3 days, 3:28:43, time (data): 1.019 (0.004)] l_pix: 1.8101e-02 
+2025-04-20 23:05:24,639 INFO: [Defoc..][epoch:221, iter: 194,000, lr:(2.711e-04,)] [eta: 3 days, 2:16:57, time (data): 0.939 (0.005)] l_pix: 4.4556e-02 
+2025-04-20 23:21:32,470 INFO: [Defoc..][epoch:222, iter: 195,000, lr:(2.703e-04,)] [eta: 3 days, 1:39:02, time (data): 1.031 (0.003)] l_pix: 2.6666e-02 
+2025-04-20 23:38:08,849 INFO: [Defoc..][epoch:223, iter: 196,000, lr:(2.694e-04,)] [eta: 3 days, 1:15:04, time (data): 1.009 (0.012)] l_pix: 3.8061e-02 
+2025-04-20 23:38:08,850 INFO: Saving models and training states.
+2025-04-20 23:38:24,070 INFO: Validation ValSet,		 # psnr: 25.2814
+2025-04-20 23:55:03,113 INFO: [Defoc..][epoch:224, iter: 197,000, lr:(2.685e-04,)] [eta: 3 days, 0:58:10, time (data): 0.832 (0.004)] l_pix: 2.4774e-02 
+2025-04-21 00:11:23,441 INFO: [Defoc..][epoch:225, iter: 198,000, lr:(2.676e-04,)] [eta: 3 days, 0:30:51, time (data): 1.003 (0.005)] l_pix: 2.9601e-02 
+2025-04-21 00:28:04,187 INFO: [Defoc..][epoch:227, iter: 199,000, lr:(2.667e-04,)] [eta: 3 days, 0:10:49, time (data): 0.886 (0.003)] l_pix: 4.3311e-02 
+2025-04-21 00:44:42,380 INFO: [Defoc..][epoch:228, iter: 200,000, lr:(2.658e-04,)] [eta: 2 days, 23:50:32, time (data): 0.917 (0.002)] l_pix: 2.5945e-02 
+2025-04-21 00:44:42,380 INFO: Saving models and training states.
+2025-04-21 00:44:58,568 INFO: Validation ValSet,		 # psnr: 25.5808
+2025-04-21 01:01:40,356 INFO: [Defoc..][epoch:229, iter: 201,000, lr:(2.649e-04,)] [eta: 2 days, 23:35:37, time (data): 0.960 (0.004)] l_pix: 4.1752e-02 
+2025-04-21 01:18:20,985 INFO: [Defoc..][epoch:230, iter: 202,000, lr:(2.640e-04,)] [eta: 2 days, 23:16:23, time (data): 0.983 (0.004)] l_pix: 2.8445e-02 
+2025-04-21 01:35:01,522 INFO: [Defoc..][epoch:231, iter: 203,000, lr:(2.631e-04,)] [eta: 2 days, 22:57:25, time (data): 0.882 (0.006)] l_pix: 2.6427e-02 
+2025-04-21 01:51:32,093 INFO: [Defoc..][epoch:232, iter: 204,000, lr:(2.621e-04,)] [eta: 2 days, 22:36:34, time (data): 1.041 (0.004)] l_pix: 3.6422e-02 
+2025-04-21 01:51:32,094 INFO: Saving models and training states.
+2025-04-21 01:51:48,807 INFO: Validation ValSet,		 # psnr: 25.1215
+2025-04-21 02:08:25,130 INFO: [Defoc..][epoch:233, iter: 205,000, lr:(2.612e-04,)] [eta: 2 days, 22:20:37, time (data): 0.979 (0.006)] l_pix: 2.5748e-02 
+2025-04-21 02:25:28,977 INFO: [Defoc..][epoch:235, iter: 206,000, lr:(2.602e-04,)] [eta: 2 days, 22:06:38, time (data): 0.921 (0.003)] l_pix: 5.4798e-02 
+2025-04-21 02:41:53,957 INFO: [Defoc..][epoch:236, iter: 207,000, lr:(2.592e-04,)] [eta: 2 days, 21:45:22, time (data): 0.927 (0.004)] l_pix: 3.1213e-02 
+2025-04-21 02:58:21,652 INFO: [Defoc..][epoch:237, iter: 208,000, lr:(2.582e-04,)] [eta: 2 days, 21:24:58, time (data): 0.943 (0.007)] l_pix: 2.6869e-02 
+2025-04-21 02:58:21,653 INFO: Saving models and training states.
+2025-04-21 02:58:36,663 INFO: Validation ValSet,		 # psnr: 25.4180
+2025-04-21 03:15:04,193 INFO: [Defoc..][epoch:238, iter: 209,000, lr:(2.572e-04,)] [eta: 2 days, 21:07:20, time (data): 1.033 (0.006)] l_pix: 2.4186e-02 
+2025-04-21 03:31:22,437 INFO: [Defoc..][epoch:239, iter: 210,000, lr:(2.562e-04,)] [eta: 2 days, 20:45:56, time (data): 0.960 (0.003)] l_pix: 2.1578e-02 
+2025-04-21 03:47:46,831 INFO: [Defoc..][epoch:240, iter: 211,000, lr:(2.552e-04,)] [eta: 2 days, 20:25:51, time (data): 0.838 (0.004)] l_pix: 2.9603e-02 
+2025-04-21 04:04:18,607 INFO: [Defoc..][epoch:241, iter: 212,000, lr:(2.542e-04,)] [eta: 2 days, 20:07:05, time (data): 1.036 (0.003)] l_pix: 3.1179e-02 
+2025-04-21 04:04:18,607 INFO: Saving models and training states.
+2025-04-21 04:04:35,182 INFO: Validation ValSet,		 # psnr: 25.4159
+2025-04-21 04:20:56,824 INFO: [Defoc..][epoch:243, iter: 213,000, lr:(2.531e-04,)] [eta: 2 days, 19:49:23, time (data): 0.887 (0.003)] l_pix: 2.7505e-02 
+2025-04-21 04:37:09,278 INFO: [Defoc..][epoch:244, iter: 214,000, lr:(2.521e-04,)] [eta: 2 days, 19:28:18, time (data): 0.969 (0.010)] l_pix: 1.6873e-02 
+2025-04-21 04:53:07,777 INFO: [Defoc..][epoch:245, iter: 215,000, lr:(2.510e-04,)] [eta: 2 days, 19:05:42, time (data): 0.888 (0.003)] l_pix: 1.3408e-02 
+2025-04-21 05:09:07,530 INFO: [Defoc..][epoch:246, iter: 216,000, lr:(2.500e-04,)] [eta: 2 days, 18:43:41, time (data): 0.925 (0.013)] l_pix: 3.6992e-02 
+2025-04-21 05:09:07,530 INFO: Saving models and training states.
+2025-04-21 05:09:22,428 INFO: Validation ValSet,		 # psnr: 25.1224
+2025-04-21 05:25:33,696 INFO: [Defoc..][epoch:247, iter: 217,000, lr:(2.489e-04,)] [eta: 2 days, 18:25:14, time (data): 1.044 (0.009)] l_pix: 4.2028e-02 
+2025-04-21 05:41:29,218 INFO: [Defoc..][epoch:248, iter: 218,000, lr:(2.478e-04,)] [eta: 2 days, 18:03:18, time (data): 0.935 (0.003)] l_pix: 3.6480e-02 
+2025-04-21 05:57:21,084 INFO: [Defoc..][epoch:249, iter: 219,000, lr:(2.467e-04,)] [eta: 2 days, 17:41:19, time (data): 0.920 (0.003)] l_pix: 2.1155e-02 
+2025-04-21 06:13:23,300 INFO: [Defoc..][epoch:251, iter: 220,000, lr:(2.456e-04,)] [eta: 2 days, 17:20:48, time (data): 0.929 (0.004)] l_pix: 2.1319e-02 
+2025-04-21 06:13:23,300 INFO: Saving models and training states.
+2025-04-21 06:13:38,992 INFO: Validation ValSet,		 # psnr: 25.2489
+2025-04-21 06:29:31,838 INFO: [Defoc..][epoch:252, iter: 221,000, lr:(2.445e-04,)] [eta: 2 days, 17:01:11, time (data): 0.833 (0.004)] l_pix: 1.7007e-02 
+2025-04-21 06:45:22,579 INFO: [Defoc..][epoch:253, iter: 222,000, lr:(2.434e-04,)] [eta: 2 days, 16:39:56, time (data): 0.859 (0.003)] l_pix: 4.3199e-02 
+2025-04-21 07:01:23,599 INFO: [Defoc..][epoch:254, iter: 223,000, lr:(2.423e-04,)] [eta: 2 days, 16:19:59, time (data): 0.981 (0.003)] l_pix: 4.4442e-02 
+2025-04-21 07:17:01,885 INFO: [Defoc..][epoch:255, iter: 224,000, lr:(2.411e-04,)] [eta: 2 days, 15:58:02, time (data): 0.962 (0.013)] l_pix: 3.4407e-02 
+2025-04-21 07:17:01,886 INFO: Saving models and training states.
+2025-04-21 07:17:18,262 INFO: Validation ValSet,		 # psnr: 25.3108
+2025-04-21 07:33:26,859 INFO: [Defoc..][epoch:256, iter: 225,000, lr:(2.400e-04,)] [eta: 2 days, 15:40:47, time (data): 0.968 (0.008)] l_pix: 3.3803e-02 
+2025-04-21 07:49:41,514 INFO: [Defoc..][epoch:257, iter: 226,000, lr:(2.388e-04,)] [eta: 2 days, 15:22:37, time (data): 0.897 (0.003)] l_pix: 6.4757e-02 
+2025-04-21 08:06:07,701 INFO: [Defoc..][epoch:259, iter: 227,000, lr:(2.377e-04,)] [eta: 2 days, 15:05:34, time (data): 0.938 (0.009)] l_pix: 1.9155e-02 
+2025-04-21 08:22:13,322 INFO: [Defoc..][epoch:260, iter: 228,000, lr:(2.365e-04,)] [eta: 2 days, 14:46:46, time (data): 0.835 (0.003)] l_pix: 4.0762e-02 
+2025-04-21 08:22:13,323 INFO: Saving models and training states.
+2025-04-21 08:22:29,395 INFO: Validation ValSet,		 # psnr: 25.4465
+2025-04-21 08:22:29,399 INFO: 
+ Updating Patch_Size to 192 and Batch_Size to 2 
+
+2025-04-21 08:34:32,824 INFO: [Defoc..][epoch:261, iter: 229,000, lr:(2.353e-04,)] [eta: 2 days, 14:09:05, time (data): 0.743 (0.003)] l_pix: 3.2150e-02 
+2025-04-21 08:46:35,172 INFO: [Defoc..][epoch:262, iter: 230,000, lr:(2.342e-04,)] [eta: 2 days, 13:31:06, time (data): 0.700 (0.002)] l_pix: 2.6651e-02 
+2025-04-21 08:58:27,904 INFO: [Defoc..][epoch:263, iter: 231,000, lr:(2.330e-04,)] [eta: 2 days, 12:53:27, time (data): 0.723 (0.005)] l_pix: 3.2950e-02 
+2025-04-21 09:10:25,528 INFO: [Defoc..][epoch:264, iter: 232,000, lr:(2.318e-04,)] [eta: 2 days, 12:17:15, time (data): 0.732 (0.002)] l_pix: 5.2724e-02 
+2025-04-21 09:10:25,529 INFO: Saving models and training states.
+2025-04-21 09:10:40,053 INFO: Validation ValSet,		 # psnr: 25.0983
+2025-04-21 09:22:35,565 INFO: [Defoc..][epoch:265, iter: 233,000, lr:(2.306e-04,)] [eta: 2 days, 11:42:59, time (data): 0.726 (0.003)] l_pix: 1.2653e-02 
+2025-04-21 09:34:36,733 INFO: [Defoc..][epoch:267, iter: 234,000, lr:(2.293e-04,)] [eta: 2 days, 11:08:56, time (data): 0.750 (0.003)] l_pix: 4.0862e-02 
+2025-04-21 09:46:30,585 INFO: [Defoc..][epoch:268, iter: 235,000, lr:(2.281e-04,)] [eta: 2 days, 10:35:14, time (data): 0.812 (0.002)] l_pix: 4.5076e-02 
+2025-04-21 09:58:23,183 INFO: [Defoc..][epoch:269, iter: 236,000, lr:(2.269e-04,)] [eta: 2 days, 10:02:17, time (data): 0.599 (0.005)] l_pix: 2.8602e-02 
+2025-04-21 09:58:23,184 INFO: Saving models and training states.
+2025-04-21 09:58:39,499 INFO: Validation ValSet,		 # psnr: 25.2326
+2025-04-21 10:10:39,745 INFO: [Defoc..][epoch:270, iter: 237,000, lr:(2.257e-04,)] [eta: 2 days, 9:31:46, time (data): 0.609 (0.004)] l_pix: 3.0001e-02 
+2025-04-21 10:22:40,692 INFO: [Defoc..][epoch:271, iter: 238,000, lr:(2.244e-04,)] [eta: 2 days, 9:00:53, time (data): 0.658 (0.002)] l_pix: 1.2492e-02 
+2025-04-21 10:34:37,826 INFO: [Defoc..][epoch:272, iter: 239,000, lr:(2.232e-04,)] [eta: 2 days, 8:30:27, time (data): 0.737 (0.003)] l_pix: 2.1216e-02 
+2025-04-21 10:46:39,087 INFO: [Defoc..][epoch:273, iter: 240,000, lr:(2.219e-04,)] [eta: 2 days, 8:00:55, time (data): 0.669 (0.003)] l_pix: 3.2404e-02 
+2025-04-21 10:46:39,088 INFO: Saving models and training states.
+2025-04-21 10:46:53,456 INFO: Validation ValSet,		 # psnr: 25.1277
+2025-04-21 10:58:49,119 INFO: [Defoc..][epoch:275, iter: 241,000, lr:(2.207e-04,)] [eta: 2 days, 7:32:34, time (data): 0.785 (0.007)] l_pix: 2.5053e-02 
+2025-04-21 11:10:57,664 INFO: [Defoc..][epoch:276, iter: 242,000, lr:(2.194e-04,)] [eta: 2 days, 7:04:40, time (data): 0.818 (0.003)] l_pix: 4.5278e-02 
+2025-04-21 11:23:04,018 INFO: [Defoc..][epoch:277, iter: 243,000, lr:(2.181e-04,)] [eta: 2 days, 6:37:11, time (data): 0.810 (0.004)] l_pix: 4.8707e-02 
+2025-04-21 11:35:16,861 INFO: [Defoc..][epoch:278, iter: 244,000, lr:(2.168e-04,)] [eta: 2 days, 6:10:36, time (data): 0.776 (0.003)] l_pix: 1.5732e-02 
+2025-04-21 11:35:16,862 INFO: Saving models and training states.
+2025-04-21 11:35:31,542 INFO: Validation ValSet,		 # psnr: 25.3070
+2025-04-21 11:47:38,693 INFO: [Defoc..][epoch:279, iter: 245,000, lr:(2.156e-04,)] [eta: 2 days, 5:44:59, time (data): 0.704 (0.008)] l_pix: 2.7030e-02 
+2025-04-21 11:59:41,779 INFO: [Defoc..][epoch:280, iter: 246,000, lr:(2.143e-04,)] [eta: 2 days, 5:18:45, time (data): 0.693 (0.007)] l_pix: 3.2912e-02 
+2025-04-21 12:12:08,829 INFO: [Defoc..][epoch:281, iter: 247,000, lr:(2.130e-04,)] [eta: 2 days, 4:54:18, time (data): 0.750 (0.002)] l_pix: 1.1490e-02 
+2025-04-21 12:24:16,520 INFO: [Defoc..][epoch:283, iter: 248,000, lr:(2.117e-04,)] [eta: 2 days, 4:29:10, time (data): 0.754 (0.003)] l_pix: 1.6658e-02 
+2025-04-21 12:24:16,520 INFO: Saving models and training states.
+2025-04-21 12:24:33,250 INFO: Validation ValSet,		 # psnr: 25.3080
+2025-04-21 12:36:42,802 INFO: [Defoc..][epoch:284, iter: 249,000, lr:(2.103e-04,)] [eta: 2 days, 4:05:25, time (data): 0.727 (0.003)] l_pix: 3.6496e-02 
+2025-04-21 12:48:50,057 INFO: [Defoc..][epoch:285, iter: 250,000, lr:(2.090e-04,)] [eta: 2 days, 3:41:01, time (data): 0.715 (0.006)] l_pix: 2.8984e-02 
+2025-04-21 13:01:09,413 INFO: [Defoc..][epoch:286, iter: 251,000, lr:(2.077e-04,)] [eta: 2 days, 3:17:37, time (data): 0.700 (0.004)] l_pix: 2.1630e-02 
+2025-04-21 13:13:23,961 INFO: [Defoc..][epoch:287, iter: 252,000, lr:(2.064e-04,)] [eta: 2 days, 2:54:17, time (data): 0.695 (0.002)] l_pix: 2.1041e-02 
+2025-04-21 13:13:23,962 INFO: Saving models and training states.
+2025-04-21 13:13:39,022 INFO: Validation ValSet,		 # psnr: 25.3183
+2025-04-21 13:26:00,810 INFO: [Defoc..][epoch:288, iter: 253,000, lr:(2.051e-04,)] [eta: 2 days, 2:32:23, time (data): 0.719 (0.002)] l_pix: 3.9042e-02 
+2025-04-21 13:38:13,447 INFO: [Defoc..][epoch:289, iter: 254,000, lr:(2.037e-04,)] [eta: 2 days, 2:09:34, time (data): 0.708 (0.004)] l_pix: 3.4023e-02 
+2025-04-21 13:50:39,762 INFO: [Defoc..][epoch:291, iter: 255,000, lr:(2.024e-04,)] [eta: 2 days, 1:47:42, time (data): 0.690 (0.002)] l_pix: 3.6489e-02 
+2025-04-21 14:02:56,765 INFO: [Defoc..][epoch:292, iter: 256,000, lr:(2.010e-04,)] [eta: 2 days, 1:25:40, time (data): 0.634 (0.003)] l_pix: 3.1590e-02 
+2025-04-21 14:02:56,765 INFO: Saving models and training states.
+2025-04-21 14:03:11,149 INFO: Validation ValSet,		 # psnr: 25.2858
+2025-04-21 14:15:38,020 INFO: [Defoc..][epoch:293, iter: 257,000, lr:(1.997e-04,)] [eta: 2 days, 1:05:01, time (data): 0.743 (0.003)] l_pix: 4.1682e-02 
+2025-04-21 14:28:10,223 INFO: [Defoc..][epoch:294, iter: 258,000, lr:(1.983e-04,)] [eta: 2 days, 0:44:09, time (data): 0.711 (0.002)] l_pix: 2.3636e-02 
+2025-04-21 14:40:11,038 INFO: [Defoc..][epoch:295, iter: 259,000, lr:(1.970e-04,)] [eta: 2 days, 0:22:09, time (data): 0.708 (0.012)] l_pix: 2.1737e-02 
+2025-04-21 14:52:07,746 INFO: [Defoc..][epoch:296, iter: 260,000, lr:(1.956e-04,)] [eta: 2 days, 0:00:14, time (data): 0.647 (0.005)] l_pix: 5.2303e-02 
+2025-04-21 14:52:07,746 INFO: Saving models and training states.
+2025-04-21 14:52:22,947 INFO: Validation ValSet,		 # psnr: 25.3205
+2025-04-21 15:02:31,013 INFO: [Defoc..][epoch:297, iter: 261,000, lr:(1.942e-04,)] [eta: 1 day, 23:34:38, time (data): 0.588 (0.003)] l_pix: 5.1363e-02 
+2025-04-21 15:12:38,652 INFO: [Defoc..][epoch:299, iter: 262,000, lr:(1.929e-04,)] [eta: 1 day, 23:08:46, time (data): 0.598 (0.002)] l_pix: 2.1391e-02 
+2025-04-21 15:22:25,032 INFO: [Defoc..][epoch:300, iter: 263,000, lr:(1.915e-04,)] [eta: 1 day, 22:42:26, time (data): 0.562 (0.006)] l_pix: 1.5590e-02 
+2025-04-21 15:32:39,762 INFO: [Defoc..][epoch:301, iter: 264,000, lr:(1.901e-04,)] [eta: 1 day, 22:17:40, time (data): 0.578 (0.004)] l_pix: 2.2942e-02 
+2025-04-21 15:32:39,763 INFO: Saving models and training states.
+2025-04-21 15:32:53,098 INFO: Validation ValSet,		 # psnr: 25.4973
+2025-04-21 15:42:52,930 INFO: [Defoc..][epoch:302, iter: 265,000, lr:(1.887e-04,)] [eta: 1 day, 21:53:11, time (data): 1.254 (0.003)] l_pix: 3.9289e-02 
+2025-04-21 15:53:03,348 INFO: [Defoc..][epoch:303, iter: 266,000, lr:(1.873e-04,)] [eta: 1 day, 21:28:56, time (data): 0.662 (0.006)] l_pix: 2.5950e-02 
+2025-04-21 16:02:50,772 INFO: [Defoc..][epoch:304, iter: 267,000, lr:(1.860e-04,)] [eta: 1 day, 21:04:10, time (data): 0.493 (0.003)] l_pix: 1.9170e-02 
+2025-04-21 16:11:22,622 INFO: [Defoc..][epoch:305, iter: 268,000, lr:(1.846e-04,)] [eta: 1 day, 20:36:55, time (data): 0.512 (0.003)] l_pix: 6.2298e-02 
+2025-04-21 16:11:22,623 INFO: Saving models and training states.
+2025-04-21 16:11:34,365 INFO: Validation ValSet,		 # psnr: 25.5159
+2025-04-21 16:20:05,158 INFO: [Defoc..][epoch:307, iter: 269,000, lr:(1.832e-04,)] [eta: 1 day, 20:10:31, time (data): 0.523 (0.003)] l_pix: 3.6085e-02 
+2025-04-21 16:28:31,467 INFO: [Defoc..][epoch:308, iter: 270,000, lr:(1.818e-04,)] [eta: 1 day, 19:43:56, time (data): 0.495 (0.003)] l_pix: 1.9738e-02 
+2025-04-21 16:36:54,595 INFO: [Defoc..][epoch:309, iter: 271,000, lr:(1.804e-04,)] [eta: 1 day, 19:17:40, time (data): 0.471 (0.003)] l_pix: 1.9254e-02 
+2025-04-21 16:45:16,998 INFO: [Defoc..][epoch:310, iter: 272,000, lr:(1.790e-04,)] [eta: 1 day, 18:51:46, time (data): 0.473 (0.003)] l_pix: 1.4036e-02 
+2025-04-21 16:45:16,999 INFO: Saving models and training states.
+2025-04-21 16:45:27,714 INFO: Validation ValSet,		 # psnr: 25.2476
+2025-04-21 16:53:49,105 INFO: [Defoc..][epoch:311, iter: 273,000, lr:(1.776e-04,)] [eta: 1 day, 18:26:36, time (data): 0.481 (0.002)] l_pix: 3.9625e-02 
+2025-04-21 17:02:20,355 INFO: [Defoc..][epoch:312, iter: 274,000, lr:(1.761e-04,)] [eta: 1 day, 18:01:47, time (data): 0.510 (0.007)] l_pix: 6.1767e-02 
+2025-04-21 17:11:27,291 INFO: [Defoc..][epoch:313, iter: 275,000, lr:(1.747e-04,)] [eta: 1 day, 17:38:30, time (data): 0.525 (0.003)] l_pix: 1.3615e-02 
+2025-04-21 17:21:04,945 INFO: [Defoc..][epoch:315, iter: 276,000, lr:(1.733e-04,)] [eta: 1 day, 17:16:31, time (data): 0.538 (0.014)] l_pix: 2.3049e-02 
+2025-04-21 17:21:04,946 INFO: Saving models and training states.
+2025-04-21 17:21:17,270 INFO: Validation ValSet,		 # psnr: 25.4147
+2025-04-21 17:29:56,070 INFO: [Defoc..][epoch:316, iter: 277,000, lr:(1.719e-04,)] [eta: 1 day, 16:53:19, time (data): 0.512 (0.012)] l_pix: 2.8389e-02 
+2025-04-21 17:38:40,877 INFO: [Defoc..][epoch:317, iter: 278,000, lr:(1.705e-04,)] [eta: 1 day, 16:30:13, time (data): 0.497 (0.003)] l_pix: 1.7501e-02 
+2025-04-21 17:47:27,331 INFO: [Defoc..][epoch:318, iter: 279,000, lr:(1.691e-04,)] [eta: 1 day, 16:07:29, time (data): 0.520 (0.003)] l_pix: 1.6695e-02 
+2025-04-21 17:56:15,700 INFO: [Defoc..][epoch:319, iter: 280,000, lr:(1.676e-04,)] [eta: 1 day, 15:45:05, time (data): 0.494 (0.012)] l_pix: 5.7883e-02 
+2025-04-21 17:56:15,701 INFO: Saving models and training states.
+2025-04-21 17:56:27,843 INFO: Validation ValSet,		 # psnr: 25.5253
+2025-04-21 18:05:15,081 INFO: [Defoc..][epoch:320, iter: 281,000, lr:(1.662e-04,)] [eta: 1 day, 15:23:18, time (data): 0.519 (0.003)] l_pix: 2.4899e-02 
+2025-04-21 18:14:06,124 INFO: [Defoc..][epoch:321, iter: 282,000, lr:(1.648e-04,)] [eta: 1 day, 15:01:32, time (data): 0.487 (0.003)] l_pix: 5.9784e-02 
+2025-04-21 18:23:10,519 INFO: [Defoc..][epoch:323, iter: 283,000, lr:(1.634e-04,)] [eta: 1 day, 14:40:25, time (data): 0.491 (0.003)] l_pix: 3.6237e-02 
+2025-04-21 18:32:00,050 INFO: [Defoc..][epoch:324, iter: 284,000, lr:(1.619e-04,)] [eta: 1 day, 14:19:07, time (data): 0.509 (0.003)] l_pix: 7.4343e-02 
+2025-04-21 18:32:00,051 INFO: Saving models and training states.
+2025-04-21 18:32:13,048 INFO: Validation ValSet,		 # psnr: 25.5976
+2025-04-21 18:41:03,606 INFO: [Defoc..][epoch:325, iter: 285,000, lr:(1.605e-04,)] [eta: 1 day, 13:58:27, time (data): 0.499 (0.002)] l_pix: 3.7042e-02 
+2025-04-21 18:49:59,649 INFO: [Defoc..][epoch:326, iter: 286,000, lr:(1.591e-04,)] [eta: 1 day, 13:37:49, time (data): 0.523 (0.002)] l_pix: 4.4847e-02 
+2025-04-21 18:58:55,464 INFO: [Defoc..][epoch:327, iter: 287,000, lr:(1.577e-04,)] [eta: 1 day, 13:17:24, time (data): 0.520 (0.002)] l_pix: 4.0808e-02 
+2025-04-21 19:07:49,605 INFO: [Defoc..][epoch:328, iter: 288,000, lr:(1.562e-04,)] [eta: 1 day, 12:57:09, time (data): 0.505 (0.011)] l_pix: 1.5155e-02 
+2025-04-21 19:07:49,605 INFO: Saving models and training states.
+2025-04-21 19:08:01,331 INFO: Validation ValSet,		 # psnr: 25.5457
+2025-04-21 19:16:53,287 INFO: [Defoc..][epoch:329, iter: 289,000, lr:(1.548e-04,)] [eta: 1 day, 12:37:22, time (data): 0.503 (0.003)] l_pix: 1.0007e-02 
+2025-04-21 19:25:57,420 INFO: [Defoc..][epoch:331, iter: 290,000, lr:(1.534e-04,)] [eta: 1 day, 12:17:49, time (data): 0.490 (0.002)] l_pix: 1.8228e-02 
+2025-04-21 19:34:49,868 INFO: [Defoc..][epoch:332, iter: 291,000, lr:(1.519e-04,)] [eta: 1 day, 11:58:09, time (data): 0.515 (0.003)] l_pix: 4.0531e-02 
+2025-04-21 19:43:43,710 INFO: [Defoc..][epoch:333, iter: 292,000, lr:(1.505e-04,)] [eta: 1 day, 11:38:43, time (data): 0.517 (0.002)] l_pix: 2.1840e-02 
+2025-04-21 19:43:43,711 INFO: Saving models and training states.
+2025-04-21 19:43:55,011 INFO: Validation ValSet,		 # psnr: 25.6405
+2025-04-21 19:52:47,863 INFO: [Defoc..][epoch:334, iter: 293,000, lr:(1.491e-04,)] [eta: 1 day, 11:19:44, time (data): 0.596 (0.002)] l_pix: 1.0964e-02 
+2025-04-21 20:01:44,283 INFO: [Defoc..][epoch:335, iter: 294,000, lr:(1.476e-04,)] [eta: 1 day, 11:00:45, time (data): 0.508 (0.007)] l_pix: 2.5186e-02 
+2025-04-21 20:10:50,886 INFO: [Defoc..][epoch:336, iter: 295,000, lr:(1.462e-04,)] [eta: 1 day, 10:42:11, time (data): 0.539 (0.004)] l_pix: 3.1594e-02 
+2025-04-21 20:19:51,723 INFO: [Defoc..][epoch:337, iter: 296,000, lr:(1.448e-04,)] [eta: 1 day, 10:23:39, time (data): 0.515 (0.004)] l_pix: 1.1838e-02 
+2025-04-21 20:19:51,724 INFO: Saving models and training states.
+2025-04-21 20:20:04,166 INFO: Validation ValSet,		 # psnr: 25.5997
+2025-04-21 20:29:18,986 INFO: [Defoc..][epoch:339, iter: 297,000, lr:(1.433e-04,)] [eta: 1 day, 10:05:54, time (data): 0.511 (0.004)] l_pix: 2.3380e-02 
+2025-04-21 20:38:05,521 INFO: [Defoc..][epoch:340, iter: 298,000, lr:(1.419e-04,)] [eta: 1 day, 9:47:22, time (data): 0.495 (0.014)] l_pix: 5.6038e-02 
+2025-04-21 20:47:01,973 INFO: [Defoc..][epoch:341, iter: 299,000, lr:(1.405e-04,)] [eta: 1 day, 9:29:13, time (data): 0.522 (0.005)] l_pix: 4.5303e-02 
+2025-04-21 20:56:08,594 INFO: [Defoc..][epoch:342, iter: 300,000, lr:(1.391e-04,)] [eta: 1 day, 9:11:28, time (data): 0.460 (0.004)] l_pix: 1.7301e-02 
+2025-04-21 20:56:08,595 INFO: Saving models and training states.
+2025-04-21 20:56:18,951 INFO: Validation ValSet,		 # psnr: 25.5661
+2025-04-21 21:04:51,800 INFO: [Defoc..][epoch:343, iter: 301,000, lr:(1.376e-04,)] [eta: 1 day, 8:53:20, time (data): 0.506 (0.012)] l_pix: 1.0186e-02 
+2025-04-21 21:13:39,263 INFO: [Defoc..][epoch:344, iter: 302,000, lr:(1.362e-04,)] [eta: 1 day, 8:35:28, time (data): 0.565 (0.003)] l_pix: 2.6026e-02 
+2025-04-21 21:24:32,383 INFO: [Defoc..][epoch:345, iter: 303,000, lr:(1.348e-04,)] [eta: 1 day, 8:20:26, time (data): 0.721 (0.003)] l_pix: 1.9998e-02 
+2025-04-21 21:36:39,361 INFO: [Defoc..][epoch:347, iter: 304,000, lr:(1.334e-04,)] [eta: 1 day, 8:07:02, time (data): 0.692 (0.003)] l_pix: 5.3716e-02 
+2025-04-21 21:36:39,362 INFO: Saving models and training states.
+2025-04-21 21:36:54,501 INFO: Validation ValSet,		 # psnr: 25.5755
+2025-04-21 21:48:52,877 INFO: [Defoc..][epoch:348, iter: 305,000, lr:(1.319e-04,)] [eta: 1 day, 7:53:48, time (data): 0.636 (0.003)] l_pix: 2.4188e-02 
+2025-04-21 22:01:07,004 INFO: [Defoc..][epoch:349, iter: 306,000, lr:(1.305e-04,)] [eta: 1 day, 7:40:35, time (data): 0.747 (0.003)] l_pix: 7.4693e-02 
+2025-04-21 22:13:14,775 INFO: [Defoc..][epoch:350, iter: 307,000, lr:(1.291e-04,)] [eta: 1 day, 7:27:15, time (data): 0.688 (0.006)] l_pix: 3.8591e-02 
+2025-04-21 22:25:24,490 INFO: [Defoc..][epoch:351, iter: 308,000, lr:(1.277e-04,)] [eta: 1 day, 7:13:59, time (data): 0.704 (0.003)] l_pix: 1.3973e-02 
+2025-04-21 22:25:24,490 INFO: Saving models and training states.
+2025-04-21 22:25:39,444 INFO: Validation ValSet,		 # psnr: 25.5170
+2025-04-21 22:37:38,069 INFO: [Defoc..][epoch:352, iter: 309,000, lr:(1.263e-04,)] [eta: 1 day, 7:00:49, time (data): 0.685 (0.003)] l_pix: 8.7562e-03 
+2025-04-21 22:49:30,341 INFO: [Defoc..][epoch:353, iter: 310,000, lr:(1.249e-04,)] [eta: 1 day, 6:47:15, time (data): 0.781 (0.002)] l_pix: 3.7496e-02 
+2025-04-21 23:01:29,757 INFO: [Defoc..][epoch:355, iter: 311,000, lr:(1.234e-04,)] [eta: 1 day, 6:33:50, time (data): 0.641 (0.005)] l_pix: 1.3902e-02 
+2025-04-21 23:13:11,397 INFO: [Defoc..][epoch:356, iter: 312,000, lr:(1.220e-04,)] [eta: 1 day, 6:20:07, time (data): 0.965 (0.003)] l_pix: 3.5072e-02 
+2025-04-21 23:13:11,397 INFO: Saving models and training states.
+2025-04-21 23:13:26,366 INFO: Validation ValSet,		 # psnr: 25.6057
+2025-04-21 23:25:13,277 INFO: [Defoc..][epoch:357, iter: 313,000, lr:(1.206e-04,)] [eta: 1 day, 6:06:48, time (data): 0.723 (0.003)] l_pix: 2.5913e-02 
+2025-04-21 23:36:05,622 INFO: [Defoc..][epoch:358, iter: 314,000, lr:(1.192e-04,)] [eta: 1 day, 5:52:14, time (data): 0.520 (0.003)] l_pix: 1.7826e-02 
+2025-04-21 23:45:24,220 INFO: [Defoc..][epoch:359, iter: 315,000, lr:(1.178e-04,)] [eta: 1 day, 5:36:03, time (data): 0.520 (0.002)] l_pix: 4.3531e-02 
+2025-04-21 23:54:24,077 INFO: [Defoc..][epoch:360, iter: 316,000, lr:(1.164e-04,)] [eta: 1 day, 5:19:38, time (data): 0.528 (0.005)] l_pix: 1.7916e-02 
+2025-04-21 23:54:24,078 INFO: Saving models and training states.
+2025-04-21 23:54:36,167 INFO: Validation ValSet,		 # psnr: 25.6072
+2025-04-22 00:03:22,787 INFO: [Defoc..][epoch:361, iter: 317,000, lr:(1.150e-04,)] [eta: 1 day, 5:03:19, time (data): 0.524 (0.002)] l_pix: 2.6825e-02 
+2025-04-22 00:12:24,282 INFO: [Defoc..][epoch:363, iter: 318,000, lr:(1.137e-04,)] [eta: 1 day, 4:47:09, time (data): 0.501 (0.003)] l_pix: 3.6562e-02 
+2025-04-22 00:21:12,836 INFO: [Defoc..][epoch:364, iter: 319,000, lr:(1.123e-04,)] [eta: 1 day, 4:30:53, time (data): 0.490 (0.004)] l_pix: 5.5659e-02 
+2025-04-22 00:30:02,034 INFO: [Defoc..][epoch:365, iter: 320,000, lr:(1.109e-04,)] [eta: 1 day, 4:14:43, time (data): 0.518 (0.003)] l_pix: 1.7094e-02 
+2025-04-22 00:30:02,035 INFO: Saving models and training states.
+2025-04-22 00:30:13,847 INFO: Validation ValSet,		 # psnr: 25.5924
+2025-04-22 00:39:01,902 INFO: [Defoc..][epoch:366, iter: 321,000, lr:(1.095e-04,)] [eta: 1 day, 3:58:51, time (data): 0.493 (0.002)] l_pix: 5.7321e-02 
+2025-04-22 00:48:03,452 INFO: [Defoc..][epoch:367, iter: 322,000, lr:(1.081e-04,)] [eta: 1 day, 3:43:06, time (data): 0.504 (0.005)] l_pix: 3.1858e-02 
+2025-04-22 00:56:50,828 INFO: [Defoc..][epoch:368, iter: 323,000, lr:(1.068e-04,)] [eta: 1 day, 3:27:13, time (data): 0.515 (0.003)] l_pix: 2.7050e-02 
+2025-04-22 01:05:38,453 INFO: [Defoc..][epoch:369, iter: 324,000, lr:(1.054e-04,)] [eta: 1 day, 3:11:27, time (data): 0.562 (0.002)] l_pix: 1.9165e-02 
+2025-04-22 01:05:38,453 INFO: Saving models and training states.
+2025-04-22 01:05:51,349 INFO: Validation ValSet,		 # psnr: 25.6071
+2025-04-22 01:06:03,803 INFO: 
+ Updating Patch_Size to 256 and Batch_Size to 1 
+
+2025-04-22 01:14:23,074 INFO: [Defoc..][epoch:371, iter: 325,000, lr:(1.040e-04,)] [eta: 1 day, 2:55:44, time (data): 0.496 (0.004)] l_pix: 2.3971e-02 
+2025-04-22 01:22:43,050 INFO: [Defoc..][epoch:372, iter: 326,000, lr:(1.027e-04,)] [eta: 1 day, 2:39:44, time (data): 0.471 (0.002)] l_pix: 2.2671e-02 
+2025-04-22 01:31:01,286 INFO: [Defoc..][epoch:373, iter: 327,000, lr:(1.013e-04,)] [eta: 1 day, 2:23:49, time (data): 0.526 (0.002)] l_pix: 1.6395e-02 
+2025-04-22 01:39:18,333 INFO: [Defoc..][epoch:374, iter: 328,000, lr:(9.997e-05,)] [eta: 1 day, 2:07:59, time (data): 0.472 (0.002)] l_pix: 2.3910e-02 
+2025-04-22 01:39:18,334 INFO: Saving models and training states.
+2025-04-22 01:39:29,477 INFO: Validation ValSet,		 # psnr: 25.5830
+2025-04-22 01:47:45,797 INFO: [Defoc..][epoch:375, iter: 329,000, lr:(9.862e-05,)] [eta: 1 day, 1:52:25, time (data): 0.519 (0.002)] l_pix: 3.2306e-02 
+2025-04-22 01:56:00,861 INFO: [Defoc..][epoch:376, iter: 330,000, lr:(9.728e-05,)] [eta: 1 day, 1:36:46, time (data): 0.466 (0.003)] l_pix: 2.1354e-02 
+2025-04-22 02:04:18,048 INFO: [Defoc..][epoch:377, iter: 331,000, lr:(9.595e-05,)] [eta: 1 day, 1:21:15, time (data): 0.498 (0.002)] l_pix: 2.8101e-02 
+2025-04-22 02:12:46,412 INFO: [Defoc..][epoch:379, iter: 332,000, lr:(9.462e-05,)] [eta: 1 day, 1:05:59, time (data): 0.476 (0.004)] l_pix: 2.1026e-02 
+2025-04-22 02:12:46,413 INFO: Saving models and training states.
+2025-04-22 02:12:58,660 INFO: Validation ValSet,		 # psnr: 25.4755
+2025-04-22 02:21:13,125 INFO: [Defoc..][epoch:380, iter: 333,000, lr:(9.329e-05,)] [eta: 1 day, 0:50:47, time (data): 0.473 (0.005)] l_pix: 1.6830e-02 
+2025-04-22 02:29:28,333 INFO: [Defoc..][epoch:381, iter: 334,000, lr:(9.197e-05,)] [eta: 1 day, 0:35:31, time (data): 0.465 (0.002)] l_pix: 3.8654e-02 
+2025-04-22 02:37:44,964 INFO: [Defoc..][epoch:382, iter: 335,000, lr:(9.065e-05,)] [eta: 1 day, 0:20:22, time (data): 0.462 (0.002)] l_pix: 2.9694e-02 
+2025-04-22 02:46:01,963 INFO: [Defoc..][epoch:383, iter: 336,000, lr:(8.935e-05,)] [eta: 1 day, 0:05:18, time (data): 0.502 (0.011)] l_pix: 5.6813e-02 
+2025-04-22 02:46:01,964 INFO: Saving models and training states.
+2025-04-22 02:46:13,615 INFO: Validation ValSet,		 # psnr: 25.4992
+2025-04-22 02:54:24,728 INFO: [Defoc..][epoch:384, iter: 337,000, lr:(8.804e-05,)] [eta: 23:50:24, time (data): 0.484 (0.003)] l_pix: 1.0029e-02 
+2025-04-22 03:02:37,295 INFO: [Defoc..][epoch:385, iter: 338,000, lr:(8.674e-05,)] [eta: 23:35:28, time (data): 0.486 (0.002)] l_pix: 1.9919e-02 
+2025-04-22 03:11:03,607 INFO: [Defoc..][epoch:387, iter: 339,000, lr:(8.545e-05,)] [eta: 23:20:47, time (data): 0.451 (0.002)] l_pix: 7.3922e-03 
+2025-04-22 03:19:18,150 INFO: [Defoc..][epoch:388, iter: 340,000, lr:(8.417e-05,)] [eta: 23:06:02, time (data): 0.495 (0.009)] l_pix: 1.5207e-02 
+2025-04-22 03:19:18,151 INFO: Saving models and training states.
+2025-04-22 03:19:29,279 INFO: Validation ValSet,		 # psnr: 25.6346
+2025-04-22 03:27:40,579 INFO: [Defoc..][epoch:389, iter: 341,000, lr:(8.288e-05,)] [eta: 22:51:28, time (data): 0.504 (0.004)] l_pix: 8.4041e-03 
+2025-04-22 03:35:53,365 INFO: [Defoc..][epoch:390, iter: 342,000, lr:(8.161e-05,)] [eta: 22:36:52, time (data): 0.458 (0.002)] l_pix: 8.4822e-02 
+2025-04-22 03:44:08,271 INFO: [Defoc..][epoch:391, iter: 343,000, lr:(8.034e-05,)] [eta: 22:22:22, time (data): 0.468 (0.012)] l_pix: 2.8055e-02 
+2025-04-22 03:52:24,777 INFO: [Defoc..][epoch:392, iter: 344,000, lr:(7.908e-05,)] [eta: 22:07:58, time (data): 0.489 (0.002)] l_pix: 2.2427e-02 
+2025-04-22 03:52:24,777 INFO: Saving models and training states.
+2025-04-22 03:52:37,705 INFO: Validation ValSet,		 # psnr: 25.6140
+2025-04-22 04:00:50,340 INFO: [Defoc..][epoch:393, iter: 345,000, lr:(7.783e-05,)] [eta: 21:53:45, time (data): 0.485 (0.004)] l_pix: 1.0885e-02 
+2025-04-22 04:09:19,948 INFO: [Defoc..][epoch:395, iter: 346,000, lr:(7.658e-05,)] [eta: 21:39:38, time (data): 0.459 (0.003)] l_pix: 7.3941e-03 
+2025-04-22 04:17:33,252 INFO: [Defoc..][epoch:396, iter: 347,000, lr:(7.534e-05,)] [eta: 21:25:25, time (data): 0.479 (0.005)] l_pix: 2.0783e-02 
+2025-04-22 04:26:03,208 INFO: [Defoc..][epoch:397, iter: 348,000, lr:(7.410e-05,)] [eta: 21:11:27, time (data): 0.482 (0.002)] l_pix: 4.2733e-02 
+2025-04-22 04:26:03,208 INFO: Saving models and training states.
+2025-04-22 04:26:14,477 INFO: Validation ValSet,		 # psnr: 25.5845
+2025-04-22 04:34:28,404 INFO: [Defoc..][epoch:398, iter: 349,000, lr:(7.288e-05,)] [eta: 20:57:31, time (data): 0.463 (0.002)] l_pix: 2.0387e-02 
+2025-04-22 04:42:44,443 INFO: [Defoc..][epoch:399, iter: 350,000, lr:(7.166e-05,)] [eta: 20:43:32, time (data): 0.476 (0.013)] l_pix: 2.9050e-03 
+2025-04-22 04:50:58,322 INFO: [Defoc..][epoch:400, iter: 351,000, lr:(7.044e-05,)] [eta: 20:29:36, time (data): 0.490 (0.002)] l_pix: 2.8358e-02 
+2025-04-22 04:59:12,090 INFO: [Defoc..][epoch:401, iter: 352,000, lr:(6.924e-05,)] [eta: 20:15:44, time (data): 0.480 (0.003)] l_pix: 1.1224e-01 
+2025-04-22 04:59:12,091 INFO: Saving models and training states.
+2025-04-22 04:59:23,334 INFO: Validation ValSet,		 # psnr: 25.6264
+2025-04-22 05:07:48,827 INFO: [Defoc..][epoch:403, iter: 353,000, lr:(6.804e-05,)] [eta: 20:02:10, time (data): 0.457 (0.003)] l_pix: 2.8127e-02 
+2025-04-22 05:16:03,523 INFO: [Defoc..][epoch:404, iter: 354,000, lr:(6.685e-05,)] [eta: 19:48:26, time (data): 0.462 (0.002)] l_pix: 6.9349e-02 
+2025-04-22 05:24:14,652 INFO: [Defoc..][epoch:405, iter: 355,000, lr:(6.567e-05,)] [eta: 19:34:44, time (data): 0.458 (0.002)] l_pix: 3.4987e-02 
+2025-04-22 05:32:26,884 INFO: [Defoc..][epoch:406, iter: 356,000, lr:(6.449e-05,)] [eta: 19:21:07, time (data): 0.505 (0.003)] l_pix: 2.6798e-02 
+2025-04-22 05:32:26,885 INFO: Saving models and training states.
+2025-04-22 05:32:37,738 INFO: Validation ValSet,		 # psnr: 25.6246
+2025-04-22 05:40:51,806 INFO: [Defoc..][epoch:407, iter: 357,000, lr:(6.332e-05,)] [eta: 19:07:41, time (data): 0.452 (0.003)] l_pix: 2.9079e-02 
+2025-04-22 05:49:04,713 INFO: [Defoc..][epoch:408, iter: 358,000, lr:(6.216e-05,)] [eta: 18:54:11, time (data): 0.462 (0.002)] l_pix: 1.7383e-02 
+2025-04-22 05:57:16,129 INFO: [Defoc..][epoch:409, iter: 359,000, lr:(6.101e-05,)] [eta: 18:40:44, time (data): 0.476 (0.005)] l_pix: 1.8802e-02 
+2025-04-22 06:05:39,872 INFO: [Defoc..][epoch:411, iter: 360,000, lr:(5.987e-05,)] [eta: 18:27:27, time (data): 0.488 (0.003)] l_pix: 3.6571e-02 
+2025-04-22 06:05:39,872 INFO: Saving models and training states.
+2025-04-22 06:05:51,494 INFO: Validation ValSet,		 # psnr: 25.7783
+2025-04-22 06:14:04,577 INFO: [Defoc..][epoch:412, iter: 361,000, lr:(5.874e-05,)] [eta: 18:14:15, time (data): 0.444 (0.003)] l_pix: 1.7122e-02 
+2025-04-22 06:22:15,157 INFO: [Defoc..][epoch:413, iter: 362,000, lr:(5.761e-05,)] [eta: 18:00:58, time (data): 0.456 (0.003)] l_pix: 2.0100e-02 
+2025-04-22 06:30:27,673 INFO: [Defoc..][epoch:414, iter: 363,000, lr:(5.649e-05,)] [eta: 17:47:45, time (data): 0.453 (0.003)] l_pix: 1.1178e-02 
+2025-04-22 06:38:40,548 INFO: [Defoc..][epoch:415, iter: 364,000, lr:(5.538e-05,)] [eta: 17:34:36, time (data): 0.546 (0.003)] l_pix: 7.1867e-03 
+2025-04-22 06:38:40,548 INFO: Saving models and training states.
+2025-04-22 06:38:52,049 INFO: Validation ValSet,		 # psnr: 25.6496
+2025-04-22 06:47:11,227 INFO: [Defoc..][epoch:416, iter: 365,000, lr:(5.428e-05,)] [eta: 17:21:39, time (data): 0.499 (0.003)] l_pix: 2.7730e-02 
+2025-04-22 06:55:26,135 INFO: [Defoc..][epoch:417, iter: 366,000, lr:(5.319e-05,)] [eta: 17:08:37, time (data): 0.525 (0.002)] l_pix: 3.5532e-02 
+2025-04-22 07:03:49,649 INFO: [Defoc..][epoch:419, iter: 367,000, lr:(5.211e-05,)] [eta: 16:55:43, time (data): 0.451 (0.002)] l_pix: 8.0961e-03 
+2025-04-22 07:12:06,739 INFO: [Defoc..][epoch:420, iter: 368,000, lr:(5.103e-05,)] [eta: 16:42:48, time (data): 0.487 (0.002)] l_pix: 1.0287e-02 
+2025-04-22 07:12:06,739 INFO: Saving models and training states.
+2025-04-22 07:12:18,138 INFO: Validation ValSet,		 # psnr: 25.5728
+2025-04-22 07:20:29,506 INFO: [Defoc..][epoch:421, iter: 369,000, lr:(4.997e-05,)] [eta: 16:30:00, time (data): 0.489 (0.003)] l_pix: 4.8544e-02 
+2025-04-22 07:28:40,163 INFO: [Defoc..][epoch:422, iter: 370,000, lr:(4.892e-05,)] [eta: 16:17:08, time (data): 0.502 (0.002)] l_pix: 7.4291e-02 
+2025-04-22 07:36:53,987 INFO: [Defoc..][epoch:423, iter: 371,000, lr:(4.787e-05,)] [eta: 16:04:21, time (data): 0.453 (0.002)] l_pix: 6.6529e-02 
+2025-04-22 07:45:07,247 INFO: [Defoc..][epoch:424, iter: 372,000, lr:(4.683e-05,)] [eta: 15:51:36, time (data): 0.465 (0.005)] l_pix: 5.4314e-02 
+2025-04-22 07:45:07,247 INFO: Saving models and training states.
+2025-04-22 07:45:19,155 INFO: Validation ValSet,		 # psnr: 25.6466
+2025-04-22 07:53:32,720 INFO: [Defoc..][epoch:425, iter: 373,000, lr:(4.581e-05,)] [eta: 15:39:00, time (data): 0.469 (0.004)] l_pix: 8.4063e-02 
+2025-04-22 08:01:56,015 INFO: [Defoc..][epoch:427, iter: 374,000, lr:(4.479e-05,)] [eta: 15:26:26, time (data): 0.462 (0.003)] l_pix: 2.4198e-02 
+2025-04-22 08:10:06,070 INFO: [Defoc..][epoch:428, iter: 375,000, lr:(4.378e-05,)] [eta: 15:13:48, time (data): 0.487 (0.011)] l_pix: 4.5960e-03 
+2025-04-22 08:18:17,613 INFO: [Defoc..][epoch:429, iter: 376,000, lr:(4.278e-05,)] [eta: 15:01:14, time (data): 0.488 (0.004)] l_pix: 2.0714e-02 
+2025-04-22 08:18:17,613 INFO: Saving models and training states.
+2025-04-22 08:18:29,178 INFO: Validation ValSet,		 # psnr: 25.5848
+2025-04-22 08:26:39,478 INFO: [Defoc..][epoch:430, iter: 377,000, lr:(4.180e-05,)] [eta: 14:48:47, time (data): 0.508 (0.001)] l_pix: 1.0183e-02 
+2025-04-22 08:34:50,557 INFO: [Defoc..][epoch:431, iter: 378,000, lr:(4.082e-05,)] [eta: 14:36:18, time (data): 0.457 (0.002)] l_pix: 2.9497e-02 
+2025-04-22 08:43:04,571 INFO: [Defoc..][epoch:432, iter: 379,000, lr:(3.985e-05,)] [eta: 14:23:53, time (data): 0.451 (0.002)] l_pix: 2.3985e-02 
+2025-04-22 08:51:15,497 INFO: [Defoc..][epoch:433, iter: 380,000, lr:(3.889e-05,)] [eta: 14:11:29, time (data): 0.472 (0.002)] l_pix: 2.2028e-02 
+2025-04-22 08:51:15,497 INFO: Saving models and training states.
+2025-04-22 08:51:26,523 INFO: Validation ValSet,		 # psnr: 25.6407
+2025-04-22 08:59:49,072 INFO: [Defoc..][epoch:435, iter: 381,000, lr:(3.794e-05,)] [eta: 13:59:16, time (data): 0.457 (0.003)] l_pix: 1.2393e-02 
+2025-04-22 09:07:59,507 INFO: [Defoc..][epoch:436, iter: 382,000, lr:(3.701e-05,)] [eta: 13:46:57, time (data): 0.467 (0.003)] l_pix: 2.9776e-02 
+2025-04-22 09:16:14,496 INFO: [Defoc..][epoch:437, iter: 383,000, lr:(3.608e-05,)] [eta: 13:34:42, time (data): 0.462 (0.002)] l_pix: 8.6326e-03 
+2025-04-22 09:24:23,725 INFO: [Defoc..][epoch:438, iter: 384,000, lr:(3.516e-05,)] [eta: 13:22:27, time (data): 0.492 (0.003)] l_pix: 5.2006e-02 
+2025-04-22 09:24:23,726 INFO: Saving models and training states.
+2025-04-22 09:24:34,884 INFO: Validation ValSet,		 # psnr: 25.6790
+2025-04-22 09:32:43,452 INFO: [Defoc..][epoch:439, iter: 385,000, lr:(3.426e-05,)] [eta: 13:10:19, time (data): 0.474 (0.009)] l_pix: 9.0343e-02 
+2025-04-22 09:40:53,302 INFO: [Defoc..][epoch:440, iter: 386,000, lr:(3.336e-05,)] [eta: 12:58:09, time (data): 0.450 (0.002)] l_pix: 2.4636e-02 
+2025-04-22 09:49:06,635 INFO: [Defoc..][epoch:441, iter: 387,000, lr:(3.248e-05,)] [eta: 12:46:03, time (data): 0.503 (0.003)] l_pix: 4.3994e-02 
+2025-04-22 09:57:31,000 INFO: [Defoc..][epoch:443, iter: 388,000, lr:(3.160e-05,)] [eta: 12:34:03, time (data): 0.463 (0.003)] l_pix: 2.0269e-02 
+2025-04-22 09:57:31,001 INFO: Saving models and training states.
+2025-04-22 09:57:42,607 INFO: Validation ValSet,		 # psnr: 25.6743
+2025-04-22 10:05:50,758 INFO: [Defoc..][epoch:444, iter: 389,000, lr:(3.074e-05,)] [eta: 12:22:04, time (data): 0.518 (0.003)] l_pix: 1.6044e-02 
+2025-04-22 10:14:04,016 INFO: [Defoc..][epoch:445, iter: 390,000, lr:(2.989e-05,)] [eta: 12:10:04, time (data): 0.491 (0.002)] l_pix: 3.4073e-02 
+2025-04-22 10:22:14,319 INFO: [Defoc..][epoch:446, iter: 391,000, lr:(2.905e-05,)] [eta: 11:58:06, time (data): 0.496 (0.002)] l_pix: 1.6156e-02 
+2025-04-22 10:30:35,273 INFO: [Defoc..][epoch:447, iter: 392,000, lr:(2.822e-05,)] [eta: 11:46:14, time (data): 0.518 (0.003)] l_pix: 8.4932e-03 
+2025-04-22 10:30:35,273 INFO: Saving models and training states.
+2025-04-22 10:30:47,752 INFO: Validation ValSet,		 # psnr: 25.6651
+2025-04-22 10:39:02,209 INFO: [Defoc..][epoch:448, iter: 393,000, lr:(2.740e-05,)] [eta: 11:34:25, time (data): 0.482 (0.002)] l_pix: 3.1581e-03 
+2025-04-22 10:47:17,911 INFO: [Defoc..][epoch:449, iter: 394,000, lr:(2.660e-05,)] [eta: 11:22:34, time (data): 0.482 (0.004)] l_pix: 1.2031e-02 
+2025-04-22 10:55:40,560 INFO: [Defoc..][epoch:451, iter: 395,000, lr:(2.580e-05,)] [eta: 11:10:48, time (data): 0.632 (0.001)] l_pix: 4.5110e-02 
+2025-04-22 11:03:51,653 INFO: [Defoc..][epoch:452, iter: 396,000, lr:(2.502e-05,)] [eta: 10:59:01, time (data): 0.458 (0.012)] l_pix: 3.3614e-02 
+2025-04-22 11:03:51,653 INFO: Saving models and training states.
+2025-04-22 11:04:03,144 INFO: Validation ValSet,		 # psnr: 25.7018
+2025-04-22 11:04:03,147 INFO: 
+ Updating Patch_Size to 288 and Batch_Size to 1 
+
+2025-04-22 11:14:05,265 INFO: [Defoc..][epoch:453, iter: 397,000, lr:(2.424e-05,)] [eta: 10:47:49, time (data): 0.591 (0.003)] l_pix: 6.7743e-02 
+2025-04-22 11:24:06,502 INFO: [Defoc..][epoch:454, iter: 398,000, lr:(2.348e-05,)] [eta: 10:36:35, time (data): 0.621 (0.002)] l_pix: 2.9754e-02 
+2025-04-22 11:34:03,881 INFO: [Defoc..][epoch:455, iter: 399,000, lr:(2.273e-05,)] [eta: 10:25:20, time (data): 0.597 (0.009)] l_pix: 2.5299e-02 
+2025-04-22 11:44:02,435 INFO: [Defoc..][epoch:456, iter: 400,000, lr:(2.200e-05,)] [eta: 10:14:06, time (data): 0.580 (0.003)] l_pix: 3.4719e-02 
+2025-04-22 11:44:02,436 INFO: Saving models and training states.
+2025-04-22 11:44:14,208 INFO: Validation ValSet,		 # psnr: 25.6866
+2025-04-22 11:54:15,459 INFO: [Defoc..][epoch:457, iter: 401,000, lr:(2.127e-05,)] [eta: 10:02:57, time (data): 0.576 (0.002)] l_pix: 1.4092e-02 
+2025-04-22 12:04:23,983 INFO: [Defoc..][epoch:459, iter: 402,000, lr:(2.056e-05,)] [eta: 9:51:47, time (data): 0.588 (0.003)] l_pix: 6.0581e-02 
+2025-04-22 12:14:22,321 INFO: [Defoc..][epoch:460, iter: 403,000, lr:(1.985e-05,)] [eta: 9:40:35, time (data): 0.636 (0.003)] l_pix: 1.7533e-02 
+2025-04-22 12:24:24,483 INFO: [Defoc..][epoch:461, iter: 404,000, lr:(1.916e-05,)] [eta: 9:29:25, time (data): 0.547 (0.004)] l_pix: 1.8955e-02 
+2025-04-22 12:24:24,484 INFO: Saving models and training states.
+2025-04-22 12:24:35,927 INFO: Validation ValSet,		 # psnr: 25.6304
+2025-04-22 12:34:42,758 INFO: [Defoc..][epoch:462, iter: 405,000, lr:(1.849e-05,)] [eta: 9:18:19, time (data): 0.618 (0.003)] l_pix: 1.7974e-02 
+2025-04-22 12:44:49,984 INFO: [Defoc..][epoch:463, iter: 406,000, lr:(1.782e-05,)] [eta: 9:07:10, time (data): 0.793 (0.007)] l_pix: 1.0600e-02 
+2025-04-22 12:54:53,694 INFO: [Defoc..][epoch:464, iter: 407,000, lr:(1.717e-05,)] [eta: 8:56:02, time (data): 0.575 (0.003)] l_pix: 2.2972e-02 
+2025-04-22 13:04:43,457 INFO: [Defoc..][epoch:465, iter: 408,000, lr:(1.652e-05,)] [eta: 8:44:52, time (data): 0.554 (0.001)] l_pix: 1.2522e-02 
+2025-04-22 13:04:43,458 INFO: Saving models and training states.
+2025-04-22 13:04:55,166 INFO: Validation ValSet,		 # psnr: 25.6772
+2025-04-22 13:14:50,118 INFO: [Defoc..][epoch:467, iter: 409,000, lr:(1.589e-05,)] [eta: 8:33:45, time (data): 0.600 (0.004)] l_pix: 2.9821e-02 
+2025-04-22 13:24:44,093 INFO: [Defoc..][epoch:468, iter: 410,000, lr:(1.528e-05,)] [eta: 8:22:37, time (data): 0.544 (0.000)] l_pix: 2.6962e-02 
+2025-04-22 13:34:36,502 INFO: [Defoc..][epoch:469, iter: 411,000, lr:(1.467e-05,)] [eta: 8:11:29, time (data): 0.564 (0.001)] l_pix: 2.5170e-02 
+2025-04-22 13:44:39,642 INFO: [Defoc..][epoch:470, iter: 412,000, lr:(1.408e-05,)] [eta: 8:00:23, time (data): 0.580 (0.005)] l_pix: 2.8961e-02 
+2025-04-22 13:44:39,643 INFO: Saving models and training states.
+2025-04-22 13:44:51,728 INFO: Validation ValSet,		 # psnr: 25.6310
+2025-04-22 13:54:10,625 INFO: [Defoc..][epoch:471, iter: 413,000, lr:(1.350e-05,)] [eta: 7:49:12, time (data): 0.579 (0.013)] l_pix: 4.2343e-02 
+2025-04-22 14:03:32,448 INFO: [Defoc..][epoch:472, iter: 414,000, lr:(1.293e-05,)] [eta: 7:38:01, time (data): 0.560 (0.003)] l_pix: 3.7619e-02 
+2025-04-22 14:12:56,679 INFO: [Defoc..][epoch:473, iter: 415,000, lr:(1.238e-05,)] [eta: 7:26:50, time (data): 0.544 (0.003)] l_pix: 3.6318e-02 
+2025-04-22 14:22:34,170 INFO: [Defoc..][epoch:475, iter: 416,000, lr:(1.184e-05,)] [eta: 7:15:43, time (data): 0.548 (0.002)] l_pix: 2.2601e-02 
+2025-04-22 14:22:34,171 INFO: Saving models and training states.
+2025-04-22 14:22:44,981 INFO: Validation ValSet,		 # psnr: 25.6672
+2025-04-22 14:32:12,638 INFO: [Defoc..][epoch:476, iter: 417,000, lr:(1.131e-05,)] [eta: 7:04:37, time (data): 0.551 (0.004)] l_pix: 6.3220e-02 
+2025-04-22 14:42:01,912 INFO: [Defoc..][epoch:477, iter: 418,000, lr:(1.079e-05,)] [eta: 6:53:33, time (data): 0.566 (0.007)] l_pix: 2.0695e-02 
+2025-04-22 14:52:03,541 INFO: [Defoc..][epoch:478, iter: 419,000, lr:(1.029e-05,)] [eta: 6:42:32, time (data): 0.559 (0.004)] l_pix: 3.4845e-02 
+2025-04-22 15:02:06,117 INFO: [Defoc..][epoch:479, iter: 420,000, lr:(9.800e-06,)] [eta: 6:31:32, time (data): 0.590 (0.000)] l_pix: 1.0887e-02 
+2025-04-22 15:02:06,118 INFO: Saving models and training states.
+2025-04-22 15:02:18,540 INFO: Validation ValSet,		 # psnr: 25.6904
+2025-04-22 15:12:04,376 INFO: [Defoc..][epoch:480, iter: 421,000, lr:(9.322e-06,)] [eta: 6:20:31, time (data): 0.641 (0.000)] l_pix: 2.8808e-02 
+2025-04-22 15:21:43,322 INFO: [Defoc..][epoch:481, iter: 422,000, lr:(8.858e-06,)] [eta: 6:09:28, time (data): 0.542 (0.003)] l_pix: 4.9065e-03 
+2025-04-22 15:31:46,815 INFO: [Defoc..][epoch:483, iter: 423,000, lr:(8.406e-06,)] [eta: 5:58:30, time (data): 0.556 (0.002)] l_pix: 1.8275e-02 
+2025-04-22 15:41:43,958 INFO: [Defoc..][epoch:484, iter: 424,000, lr:(7.968e-06,)] [eta: 5:47:30, time (data): 0.579 (0.013)] l_pix: 9.9174e-03 
+2025-04-22 15:41:43,959 INFO: Saving models and training states.
+2025-04-22 15:41:56,697 INFO: Validation ValSet,		 # psnr: 25.6917
+2025-04-22 15:51:49,924 INFO: [Defoc..][epoch:485, iter: 425,000, lr:(7.542e-06,)] [eta: 5:36:33, time (data): 0.585 (0.002)] l_pix: 1.5665e-02 
+2025-04-22 16:01:45,145 INFO: [Defoc..][epoch:486, iter: 426,000, lr:(7.130e-06,)] [eta: 5:25:35, time (data): 0.889 (0.003)] l_pix: 4.3736e-02 
+2025-04-22 16:11:43,905 INFO: [Defoc..][epoch:487, iter: 427,000, lr:(6.731e-06,)] [eta: 5:14:37, time (data): 0.567 (0.007)] l_pix: 3.0609e-02 
+2025-04-22 16:21:45,494 INFO: [Defoc..][epoch:488, iter: 428,000, lr:(6.344e-06,)] [eta: 5:03:40, time (data): 0.627 (0.002)] l_pix: 1.6230e-02 
+2025-04-22 16:21:45,495 INFO: Saving models and training states.
+2025-04-22 16:21:58,453 INFO: Validation ValSet,		 # psnr: 25.6666
+2025-04-22 16:32:00,450 INFO: [Defoc..][epoch:489, iter: 429,000, lr:(5.972e-06,)] [eta: 4:52:46, time (data): 0.590 (0.006)] l_pix: 2.3619e-02 
+2025-04-22 16:42:11,451 INFO: [Defoc..][epoch:491, iter: 430,000, lr:(5.612e-06,)] [eta: 4:41:51, time (data): 0.564 (0.002)] l_pix: 1.4860e-02 
+2025-04-22 16:52:15,266 INFO: [Defoc..][epoch:492, iter: 431,000, lr:(5.266e-06,)] [eta: 4:30:56, time (data): 0.589 (0.003)] l_pix: 2.0730e-02 
+2025-04-22 17:02:18,147 INFO: [Defoc..][epoch:493, iter: 432,000, lr:(4.933e-06,)] [eta: 4:20:01, time (data): 0.608 (0.003)] l_pix: 4.6463e-02 
+2025-04-22 17:02:18,148 INFO: Saving models and training states.
+2025-04-22 17:02:29,534 INFO: Validation ValSet,		 # psnr: 25.6691
+2025-04-22 17:02:29,540 INFO: 
+ Updating Patch_Size to 320 and Batch_Size to 1 
+
+2025-04-22 17:14:32,674 INFO: [Defoc..][epoch:494, iter: 433,000, lr:(4.613e-06,)] [eta: 4:09:19, time (data): 0.691 (0.002)] l_pix: 6.1187e-02 
+2025-04-22 17:26:36,445 INFO: [Defoc..][epoch:495, iter: 434,000, lr:(4.307e-06,)] [eta: 3:58:35, time (data): 0.709 (0.005)] l_pix: 2.3262e-02 
+2025-04-22 17:38:42,579 INFO: [Defoc..][epoch:496, iter: 435,000, lr:(4.014e-06,)] [eta: 3:47:50, time (data): 0.726 (0.003)] l_pix: 5.0551e-02 
+2025-04-22 17:50:49,531 INFO: [Defoc..][epoch:497, iter: 436,000, lr:(3.735e-06,)] [eta: 3:37:05, time (data): 0.709 (0.002)] l_pix: 4.8365e-02 
+2025-04-22 17:50:49,532 INFO: Saving models and training states.
+2025-04-22 17:51:03,155 INFO: Validation ValSet,		 # psnr: 25.6904
+2025-04-22 18:03:18,916 INFO: [Defoc..][epoch:499, iter: 437,000, lr:(3.469e-06,)] [eta: 3:26:21, time (data): 0.784 (0.002)] l_pix: 3.1819e-02 
+2025-04-22 18:15:20,717 INFO: [Defoc..][epoch:500, iter: 438,000, lr:(3.217e-06,)] [eta: 3:15:35, time (data): 0.689 (0.008)] l_pix: 4.3815e-03 
+2025-04-22 18:27:21,781 INFO: [Defoc..][epoch:501, iter: 439,000, lr:(2.978e-06,)] [eta: 3:04:47, time (data): 0.721 (0.003)] l_pix: 3.5992e-02 
+2025-04-22 18:39:23,951 INFO: [Defoc..][epoch:502, iter: 440,000, lr:(2.752e-06,)] [eta: 2:53:59, time (data): 0.727 (0.004)] l_pix: 1.7748e-02 
+2025-04-22 18:39:23,952 INFO: Saving models and training states.
+2025-04-22 18:39:36,300 INFO: Validation ValSet,		 # psnr: 25.6779
+2025-04-22 18:51:37,393 INFO: [Defoc..][epoch:503, iter: 441,000, lr:(2.540e-06,)] [eta: 2:43:11, time (data): 0.727 (0.002)] l_pix: 2.5873e-02 
+2025-04-22 19:03:38,954 INFO: [Defoc..][epoch:504, iter: 442,000, lr:(2.342e-06,)] [eta: 2:32:22, time (data): 0.725 (0.002)] l_pix: 8.0155e-03 
+2025-04-22 19:15:44,605 INFO: [Defoc..][epoch:505, iter: 443,000, lr:(2.158e-06,)] [eta: 2:21:33, time (data): 0.697 (0.004)] l_pix: 6.8212e-02 
+2025-04-22 19:27:47,466 INFO: [Defoc..][epoch:507, iter: 444,000, lr:(1.987e-06,)] [eta: 2:10:43, time (data): 0.748 (0.004)] l_pix: 3.1606e-02 
+2025-04-22 19:27:47,467 INFO: Saving models and training states.
+2025-04-22 19:28:00,652 INFO: Validation ValSet,		 # psnr: 25.6780
+2025-04-22 19:39:29,427 INFO: [Defoc..][epoch:508, iter: 445,000, lr:(1.829e-06,)] [eta: 1:59:51, time (data): 0.703 (0.005)] l_pix: 8.5603e-02 
+2025-04-22 19:51:40,853 INFO: [Defoc..][epoch:509, iter: 446,000, lr:(1.685e-06,)] [eta: 1:49:00, time (data): 0.714 (0.002)] l_pix: 1.7319e-02 
+2025-04-22 20:04:01,447 INFO: [Defoc..][epoch:510, iter: 447,000, lr:(1.555e-06,)] [eta: 1:38:09, time (data): 0.764 (0.005)] l_pix: 1.1198e-02 
+2025-04-22 20:15:56,926 INFO: [Defoc..][epoch:511, iter: 448,000, lr:(1.439e-06,)] [eta: 1:27:16, time (data): 0.708 (0.000)] l_pix: 1.4069e-02 
+2025-04-22 20:15:56,927 INFO: Saving models and training states.
+2025-04-22 20:16:08,616 INFO: Validation ValSet,		 # psnr: 25.6819
+
+2025-04-23 10:40:43,388 INFO: Loading Restormer model from d:\2024_hzf\programs\restormer\experiments\DefocusDeblur_Single_8bit_Restormer_MAX320_642111\models\net_g_448000.pth.
+2025-04-23 10:40:43,950 INFO: Model [ImageCleanModel] is created.
+2025-04-23 10:40:44,018 INFO: Resuming training from epoch: 511, iter: 448000.
+2025-04-23 10:41:00,330 INFO: Start training from epoch: 511, iter: 448000
+2025-04-23 10:41:17,160 INFO: 
+ Updating Patch_Size to 320 and Batch_Size to 1 
+
+2025-04-23 10:52:52,981 INFO: [Defoc..][epoch:512, iter: 449,000, lr:(1.336e-06,)] [eta: 1:24:56, time (data): 0.655 (0.000)] l_pix: 1.0983e-02 
+2025-04-23 11:04:03,910 INFO: [Defoc..][epoch:513, iter: 450,000, lr:(1.247e-06,)] [eta: 1:09:56, time (data): 0.619 (0.001)] l_pix: 9.1382e-03 
+2025-04-23 11:14:45,627 INFO: [Defoc..][epoch:514, iter: 451,000, lr:(1.171e-06,)] [eta: 0:56:40, time (data): 0.632 (0.003)] l_pix: 1.7877e-02 
+2025-04-23 11:25:30,565 INFO: [Defoc..][epoch:515, iter: 452,000, lr:(1.110e-06,)] [eta: 0:44:45, time (data): 0.636 (0.002)] l_pix: 4.1689e-02 
+2025-04-23 11:25:30,566 INFO: Saving models and training states.
+2025-04-23 11:25:41,049 INFO: Validation ValSet,		 # psnr: 25.6793
+2025-04-23 11:37:03,810 INFO: [Defoc..][epoch:516, iter: 453,000, lr:(1.062e-06,)] [eta: 0:33:46, time (data): 0.673 (0.001)] l_pix: 2.8217e-02 
+2025-04-23 11:48:31,723 INFO: [Defoc..][epoch:517, iter: 454,000, lr:(1.027e-06,)] [eta: 0:22:34, time (data): 0.682 (0.004)] l_pix: 1.9211e-02 
+2025-04-23 12:00:02,404 INFO: [Defoc..][epoch:518, iter: 455,000, lr:(1.007e-06,)] [eta: 0:11:18, time (data): 0.647 (0.002)] l_pix: 3.8292e-02 
+2025-04-23 12:11:33,139 INFO: [Defoc..][epoch:520, iter: 456,000, lr:(1.000e-06,)] [eta: 0:00:00, time (data): 0.676 (0.000)] l_pix: 7.8024e-03 
+2025-04-23 12:11:33,140 INFO: Saving models and training states.
+2025-04-23 12:11:44,981 INFO: Validation ValSet,		 # psnr: 25.6850
+2025-04-23 12:11:44,986 INFO: End of training. Time consumed: 1:30:44
+2025-04-23 12:11:44,986 INFO: Save the latest model.
+2025-04-23 12:11:55,223 INFO: Validation ValSet,		 # psnr: 25.6752
