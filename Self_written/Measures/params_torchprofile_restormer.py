@@ -13,6 +13,8 @@ from attentions import (
     CxWxW_TransformerBlock,
 )
 
+from attention_OCA import OCA_TransformerBlock
+
 
 ##########################################################################
 ## Overlapped image patch embedding with 3x3 Conv
@@ -78,7 +80,7 @@ class Restormer(nn.Module):
 
         self.encoder_level1 = nn.Sequential(
             *[
-                CWxCW_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=dim,
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -92,7 +94,7 @@ class Restormer(nn.Module):
         self.down1_2 = Downsample(dim)  ## From Level 1 to Level 2
         self.encoder_level2 = nn.Sequential(
             *[
-                CWxCW_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**1),
                     num_heads=heads[1],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -106,7 +108,7 @@ class Restormer(nn.Module):
         self.down2_3 = Downsample(int(dim * 2**1))  ## From Level 2 to Level 3
         self.encoder_level3 = nn.Sequential(
             *[
-                CWxCW_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**2),
                     num_heads=heads[2],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -120,7 +122,7 @@ class Restormer(nn.Module):
         self.down3_4 = Downsample(int(dim * 2**2))  ## From Level 3 to Level 4
         self.latent = nn.Sequential(
             *[
-                CWxCW_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**3),
                     num_heads=heads[3],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -135,7 +137,7 @@ class Restormer(nn.Module):
         self.reduce_chan_level3 = nn.Conv2d(int(dim * 2**3), int(dim * 2**2), kernel_size=1, bias=bias)
         self.decoder_level3 = nn.Sequential(
             *[
-                CWxCW_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**2),
                     num_heads=heads[2],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -150,7 +152,7 @@ class Restormer(nn.Module):
         self.reduce_chan_level2 = nn.Conv2d(int(dim * 2**2), int(dim * 2**1), kernel_size=1, bias=bias)
         self.decoder_level2 = nn.Sequential(
             *[
-                CWxCW_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**1),
                     num_heads=heads[1],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -165,7 +167,7 @@ class Restormer(nn.Module):
 
         self.decoder_level1 = nn.Sequential(
             *[
-                CWxCW_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**1),
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -178,7 +180,7 @@ class Restormer(nn.Module):
 
         self.refinement = nn.Sequential(
             *[
-                CWxCW_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**1),
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -241,11 +243,11 @@ if __name__ == "__main__":
     from torchprofile import profile_macs
     import os
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     # Check if CUDA is available and set the device
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cpu")
 
     print(f"Using device: {device}")
 

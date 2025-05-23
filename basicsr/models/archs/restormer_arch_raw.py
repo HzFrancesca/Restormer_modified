@@ -134,9 +134,9 @@ class Attention(nn.Module):
         v = rearrange(v, "b (head c) h w -> b head c (h w)", head=self.num_heads)
         # q,k,v => b,heads,c//heads,h*w
 
-        # 沿最后一个维度进行归一化
-        q = torch.nn.functional.normalize(q, dim=-1)
-        k = torch.nn.functional.normalize(k, dim=-1)
+        # 沿最后一个维度进行归一mm
+        q = F.normalize(q, dim=-1)
+        k = F.normalize(k, dim=-1)
 
         # (broadcast) self.temperature => (b,heads,c//heads, c//heads)
         attn = (q @ k.transpose(-2, -1)) * self.temperature

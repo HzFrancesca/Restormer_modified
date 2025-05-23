@@ -12,13 +12,15 @@ from attentions import (
     CxHxH_Attention,
     CxWxW_Attention,
 )
+from attention_OCA import OCA
 import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-model = HWxHW_Attention(8, 4, False)
-input_size = (1, 8, 64, 96)  # (batch_size, channels, height, width)
+model = OCA(3, 4, False, 8, 0.5, 16)
+# model = HWxHW_Attention(8, 4, False)
+input_size = (1, 3, 128, 128)  # (batch_size, channels, height, width)
 dummy_input = torch.randn(*input_size)
 
 

@@ -12,11 +12,13 @@ from attentions import (
     CxWxW_Attention,
 )
 import os
+from attention_OCA import OCA
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-model = HWxHW_Attention(8, 4, False)
+# model = HWxHW_Attention(8, 4, False)
+model = OCA(3, 4, False, 8, 0.5, 16)
 
-input_size = (1, 8, 64, 96)  # (batch_size, channels, height, width)
+input_size = (1, 3, 128, 128)  # (batch_size, channels, height, width)
 
 summary(model, input_size=input_size)

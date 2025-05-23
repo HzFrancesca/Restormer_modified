@@ -364,7 +364,7 @@ class HxH_Attention(nn.Module):
 
 # Inter-channel blocks:C*N*N x C*N*N
 class CNNxCNN_Attention(nn.Module):
-    def __init__(self, dim, num_heads, bias, blocks=8):
+    def __init__(self, dim, num_heads, bias, blocks=4):
         super().__init__()
         self.N = blocks
         self.num_heads = num_heads
@@ -522,7 +522,7 @@ class CxWxW_Attention(nn.Module):
 
 # Intra-channel blocks:C x N*N x N*N
 class CxNNxNN_Attention(nn.Module):
-    def __init__(self, dim, num_heads, bias, blocks=8):
+    def __init__(self, dim, num_heads, bias, blocks=4):
         super().__init__()
         self.N = blocks
         self.num_heads = num_heads
@@ -694,7 +694,7 @@ class CNNxCNN_TransformerBlock(nn.Module):
         super().__init__()
 
         self.norm1 = LayerNorm(dim, LayerNorm_type)
-        self.attn = CNNxCNN_Attention(dim, num_heads, bias, blocks=8)
+        self.attn = CNNxCNN_Attention(dim, num_heads, bias)
         self.norm2 = LayerNorm(dim, LayerNorm_type)
         self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
 
@@ -710,7 +710,7 @@ class CxNNxNN_TransformerBlock(nn.Module):
         super().__init__()
 
         self.norm1 = LayerNorm(dim, LayerNorm_type)
-        self.attn = CxNNxNN_Attention(dim, num_heads, bias, blocks=8)
+        self.attn = CxNNxNN_Attention(dim, num_heads, bias)
         self.norm2 = LayerNorm(dim, LayerNorm_type)
         self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
 

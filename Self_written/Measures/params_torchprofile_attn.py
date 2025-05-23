@@ -12,13 +12,16 @@ from attentions import (
     CxHxH_Attention,
     CxWxW_Attention,
 )
+
+from attention_OCA import OCA
 import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-input = torch.randn(1, 8, 64, 96)  # (batch_size, channels, height, width)
+input = torch.randn(1, 8, 48, 48)  # (batch_size, channels, height, width)
 
+# model = OCA(3, 4, False, 8, 0.5, 16)
 model = CxC_Attention(8, 4, False)
 
 macs = profile_macs(model, input)
