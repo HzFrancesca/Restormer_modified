@@ -142,6 +142,73 @@ class HWxHW_Attention(nn.Module):
         out = self.project_out(out)
         return out
 
+    @staticmethod
+    def HWxHW_macs(module, inputs, output):
+        """
+        Calculates MACs within HWxHW_Attention and adds them to module.total_ops.
+        """
+
+        x = inputs[0]
+        b, dim, h, w = x.shape
+        num_heads = module.num_heads
+        c_head = dim // num_heads
+        N_seq = h * w
+
+        # Calculate MACs for Conv2d layers
+        # 1. MACs for qkv: input (b, dim, h, w), output (b, dim*3, h, w)
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        # 2. MACs for qkv_dwconv: input (b, dim*3, h, w), output (b, dim*3, h, w)
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        # 3. MACs for project_out: input (b, dim, h, w), output (b, dim, h, w)
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+
+        # 矩阵相乘，中间的维度算一个
+        # 1. MACs for attn_scores = (q @ k.transpose(-2, -1))
+        # q: (b, num_heads, N_seq, c_head)
+        # k.transpose: (b, num_heads, c_head, N_seq)
+        macs_attn_qk = b * num_heads * N_seq * c_head * N_seq
+        # 2. MACs for temperature multiplication: attn = attn_scores * self.temperature
+        # attn_scores: (b, num_heads, N_seq, N_seq)
+        # self.temperature: (num_heads, 1, 1) - broadcasted to (b, num_heads, N_seq, N_seq)
+        macs_temperature = b * num_heads * N_seq * N_seq
+        # 3. MACs for out_attn = attn_probs @ v
+        # attn_probs: (b, num_heads, N_seq, N_seq) (shape of operand1)
+        # v: (b, num_heads, N_seq, c_head) (shape of operand2)
+        macs_attn_v = b * num_heads * N_seq * N_seq * c_head
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
+
+        macs_all = macs_conv2d + macs_attn
+
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
+
 
 # C X C
 class CxC_Attention(nn.Module):
@@ -184,6 +251,97 @@ class CxC_Attention(nn.Module):
 
         out = self.project_out(out)
         return out
+
+    @staticmethod
+    def CxC_macs(module, inputs, output):
+        """
+        Calculates MACs within CxC_Attention and adds them to module.total_ops.
+        """
+        x = inputs[0]
+        # print(f"Input shape: {x.shape}")
+        b, dim, h, w = x.shape
+        num_heads = module.num_heads
+        c_head = dim // num_heads
+        N_seq = h * w
+
+        # 1.Calculate MACs for Conv2d layers
+        # For qkv: input (b, dim, h, w), output (b, dim*3, h, w)
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        # print("---- Part1:Conv2d ----")
+        # print(f"Macs_qkv:{macs_qkv}")
+        # For qkv_dwconv: input (b, dim*3, h, w), output (b, dim*3, h, w)
+        # Note: Depthwise conv MACs are typically in_channels * k_h * k_w * H_out * W_out
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        # print(f"Macs_qkv_dwconv:{macs_qkv_dwconv}")
+        # For project_out: input (b, dim, h, w), output (b, dim, h, w)
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        # print(f"Macs_project_out:{macs_project_out}")
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+
+        # print(f"Macs_conv2d:{macs_conv2d}")
+
+        # # 2.Calculate Normalization
+        # macs_norm_q = b * num_heads * c_head * N_seq * 3
+        # macs_norm_k = b * num_heads * c_head * N_seq * 3
+        # macs_norm = macs_norm_q + macs_norm_k
+        # print("---- Part2:Normalizaton ----")
+        # print(f"Macs_norm:{macs_norm}")
+
+        # 3.Calculate Attention
+        # q @ k.transpose(-2, -1))
+        # q: (b, num_heads, c_head, N_seq)
+        # k.transpose: (b, num_heads, N_seq, c_head)
+        macs_attn_qk = b * num_heads * c_head * N_seq * c_head
+        # attn_scores * self.temperature
+        # self.temperature: (num_heads, 1, 1) - broadcasted to (b, num_heads, c_head, c_head)
+        macs_temperature = b * num_heads * c_head * c_head
+        # attn_probs @ v
+        # attn_probs: (b, num_heads, c_head, c_head) (shape of operand1)
+        # v: (b, num_heads, c_head, N_seq) (shape of operand2)
+        macs_attn_v = b * num_heads * c_head * c_head * N_seq
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
+        # print("---- Part3:Attention ----")
+        # print(f"Macs_attn:{macs_attn}")
+
+        # # 4.Calculate Softmax
+        # macs_softmax = b * num_heads * c_head * c_head * 3
+        # print("---- Part4:Softmax ----")
+        # print(f"Macs_softmax:{macs_softmax}")
+        # Sum
+        # macs_for_matmul_ops = macs_conv2d + macs_norm + macs_attn + macs_softmax
+        macs_for_matmul_ops = macs_conv2d + macs_attn
+        # print("----- Total -----")
+        # print(f"Macs_for_matual_ops:{macs_for_matmul_ops}")
+        # print(f"Module.total_ops_before:{module.total_ops.item()}")
+        module.total_ops += torch.DoubleTensor([int(macs_for_matmul_ops)])
+        # print(f"Module.total_ops_after:{module.total_ops.item()}\n")
 
 
 # CH x CH
@@ -229,8 +387,69 @@ class CHxCH_Attention(nn.Module):
         out = self.project_out(out)
         return out
 
+    @staticmethod
+    def CHxCH_macs(module, inputs, output):
+        """
+        Calculates MACs  within CHxCH_Attention.Adds them to module.total_ops.
+        """
+        x = inputs[0]
+        b, dim, h, w = x.shape
+        num_heads = module.num_heads
+        c_head = dim // num_heads
+        N_seq_q = c_head * h
+        N_seq_k = w
+
+        # Conv2d MACs
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+
+        # Matrix multiplication MACs
+        macs_attn_qk = b * num_heads * N_seq_q * N_seq_k * N_seq_q
+        macs_temperature = b * num_heads * N_seq_q * N_seq_q
+        macs_attn_v = b * num_heads * N_seq_q * N_seq_q * N_seq_k
+
+        macs_matmul = macs_attn_qk + macs_temperature + macs_attn_v
+
+        # Total MACs
+        macs_all = macs_conv2d + macs_matmul
+
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
+
 
 # WxW
+# HTA(Height-stack transposed attention)
 class WxW_Attention(nn.Module):
     def __init__(self, dim, num_heads, bias):
         super().__init__()
@@ -271,6 +490,61 @@ class WxW_Attention(nn.Module):
 
         out = self.project_out(out)
         return out
+
+    @staticmethod
+    def WxW_macs(module, inputs, output):
+        """
+        Calculates MACs  within WxW_Attention and adds them to module.total_ops.
+        """
+
+        x = inputs[0]
+        b, dim, h, w = x.shape
+
+        num_heads = module.num_heads
+        c_head = dim // num_heads
+        c_h = c_head * h
+
+        # Conv2d MACs
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+
+        # Attention Matrix
+        macs_attn_qk = b * num_heads * w * c_h * w
+        macs_temperature = b * num_heads * w * w
+        macs_attn_v = b * num_heads * w * w * c_h
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
+
+        macs_all = macs_conv2d + macs_attn
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
 
 
 # CW x CW
@@ -316,8 +590,64 @@ class CWxCW_Attention(nn.Module):
         out = self.project_out(out)
         return out
 
+    @staticmethod
+    def CWxCW_macs(module, inputs, output):
+        """
+        Calculates MACs  within CWxCW_Attention and adds them to module.total_ops
+        """
+
+        x = inputs[0]
+        b, dim, h, w = x.shape
+        num_heads = module.num_heads
+        c_head = dim // num_heads
+        N_seq_cw = c_head * w
+        N_seq_h = h
+
+        # Conv2d MACs
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+
+        # Attention Matrix
+        macs_attn_qk = b * num_heads * N_seq_cw * N_seq_h * N_seq_cw
+        macs_temperature = b * num_heads * N_seq_cw * N_seq_cw
+        macs_attn_v = b * num_heads * N_seq_cw * N_seq_cw * N_seq_h
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
+
+        macs_all = macs_conv2d + macs_attn
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
+
 
 # H x H
+# Width-stack transposed-attention(WTA)
 class HxH_Attention(nn.Module):
     def __init__(self, dim, num_heads, bias):
         super().__init__()
@@ -361,10 +691,63 @@ class HxH_Attention(nn.Module):
         out = self.project_out(out)
         return out
 
+    @staticmethod
+    def HxH_macs(module, inputs, output):
+        """
+        Calculates MACs  within HxH_Attention and adds them to module.total_ops.
+        """
+        x = inputs[0]
+        b, dim_in, h, w = x.shape
+        num_heads = module.num_heads
+        c_head = dim_in // num_heads
 
-# Inter-channel blocks:C*N*N x C*N*N
+        # Conv2d MACs
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+
+        # Attention
+        macs_attn_qk = b * num_heads * h * (c_head * w) * h
+        macs_temperature = b * num_heads * h * h
+        macs_attn_v = b * num_heads * h * h * (c_head * w)
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
+
+        macs_all = macs_conv2d + macs_attn
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
+
+
+# C*N*N x C*N*N
+# Inter-channel block cross-attention(ICS)
 class CNNxCNN_Attention(nn.Module):
-    def __init__(self, dim, num_heads, bias, blocks=8):
+    def __init__(self, dim, num_heads, bias, blocks=4):
         super().__init__()
         self.N = blocks
         self.num_heads = num_heads
@@ -433,91 +816,68 @@ class CNNxCNN_Attention(nn.Module):
         out = out[:, :, :h, :w]
         return out
 
+    @staticmethod
+    def CNNxCNN_macs(module, inputs, output):
+        """
+        Calculates MACs within CNNxCNN_Attentionand adds them to module.total_ops.
+        """
 
-# Intra-channel row: C x H x H
-class CxHxH_Attention(nn.Module):
-    def __init__(self, dim, num_heads, bias):
-        super().__init__()
-        self.num_heads = num_heads
-        self.temperature = nn.Parameter(torch.ones(num_heads, 1, 1, 1))
+        x = inputs[0]
+        b, dim, h, w = x.shape
+        num_heads = module.num_heads
+        N = module.N
 
-        self.qkv = nn.Conv2d(dim, dim * 3, kernel_size=1, bias=bias)
-        self.qkv_dwconv = nn.Conv2d(
-            dim * 3,
-            dim * 3,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            groups=dim * 3,
-            bias=bias,
+        # Calculate padding
+        h_pad = N - h % N if not h % N == 0 else 0
+        w_pad = N - w % N if not w % N == 0 else 0
+        h_after = h + h_pad
+        w_after = w + w_pad
+
+        c_head = dim // num_heads
+        c_block = c_head * N * N  # channels per block (c*N*N//num_heads)
+        N_seq = (h_after * w_after) // (N * N)  # sequence length (h*w//(N*N))
+
+        # Conv2d MACs
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
         )
-        self.project_out = nn.Conv2d(dim, dim, kernel_size=1, bias=bias)
-
-    def forward(self, x):
-        _, _, h, w = x.shape
-
-        qkv = self.qkv_dwconv(self.qkv(x))
-        q, k, v = qkv.chunk(3, dim=1)
-
-        q = rearrange(q, "b (head c) h w -> b head c h w", head=self.num_heads)
-        k = rearrange(k, "b (head c) h w -> b head c h w", head=self.num_heads)
-        v = rearrange(v, "b (head c) h w -> b head c h w", head=self.num_heads)
-
-        q = F.normalize(q, dim=-1)
-        k = F.normalize(k, dim=-1)
-
-        attn = (q @ k.transpose(-2, -1)) * self.temperature
-        # b,heads,c//heads,h,h
-        attn = attn.softmax(dim=-1)
-
-        out = attn @ v  # b,heads,c//heads,h,w
-        out = rearrange(out, "b head c h w -> b (head c) h w", head=self.num_heads, h=h, w=w)
-
-        out = self.project_out(out)
-        return out
-
-
-# Intra-channel column:C x W x W
-class CxWxW_Attention(nn.Module):
-    def __init__(self, dim, num_heads, bias):
-        super().__init__()
-        self.num_heads = num_heads
-        self.temperature = nn.Parameter(torch.ones(num_heads, 1, 1, 1))
-
-        self.qkv = nn.Conv2d(dim, dim * 3, kernel_size=1, bias=bias)
-        self.qkv_dwconv = nn.Conv2d(
-            dim * 3,
-            dim * 3,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            groups=dim * 3,
-            bias=bias,
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
         )
-        self.project_out = nn.Conv2d(dim, dim, kernel_size=1, bias=bias)
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
 
-    def forward(self, x):
-        _, _, h, w = x.shape
+        # Attention
+        macs_attn_qk = b * num_heads * c_block * N_seq * c_block
+        macs_temperature = b * num_heads * c_block * c_block
+        macs_attn_v = b * num_heads * c_block * c_block * N_seq
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
 
-        qkv = self.qkv_dwconv(self.qkv(x))
-        q, k, v = qkv.chunk(3, dim=1)
-
-        q = rearrange(q, "b (head c) h w -> b head c w h", head=self.num_heads)
-        k = rearrange(k, "b (head c) h w -> b head c w h", head=self.num_heads)
-        v = rearrange(v, "b (head c) h w -> b head c w h", head=self.num_heads)
-
-        q = F.normalize(q, dim=-1)
-        k = F.normalize(k, dim=-1)
-
-        attn = (q @ k.transpose(-2, -1)) * self.temperature
-        # b,heads,c//heads,w,w
-        attn = attn.softmax(dim=-1)
-
-        out = attn @ v  # b,heads,c//heads,w,h
-        out = rearrange(out, "b head c w h-> b (head c) h w", head=self.num_heads, h=h, w=w)
-
-        out = self.project_out(out)
-        return out
+        macs_all = macs_conv2d + macs_attn
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
 
 
 # Intra-channel blocks:C x N*N x N*N
@@ -589,6 +949,256 @@ class CxNNxNN_Attention(nn.Module):
         # 移除填充，切片回原始维度 (h, w)
         out = out[:, :, :h, :w]
         return out
+
+    @staticmethod
+    def CxNNxNN_macs(module, inputs, output):
+        """Calculates MACs  within CxNNxNN_Attention and adds them to module.total_ops"""
+        x = inputs[0]
+        b, dim_in, h, w = x.shape
+        N = module.N
+        num_heads = module.num_heads
+
+        # 计算填充后大小
+        h_pad = N - h % N if h % N != 0 else 0
+        w_pad = N - w % N if w % N != 0 else 0
+        h_after = h + h_pad
+        w_after = w + w_pad
+
+        c_head = dim_in // num_heads
+        h1 = h_after // N
+        w1 = w_after // N
+
+        # Conv2d MACs
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+
+        # Attention
+        macs_attn_qk = b * num_heads * c_head * (N * N) * (h1 * w1) * (N * N)
+        macs_temperature = b * num_heads * c_head * (N * N) * (N * N)
+        macs_attn_v = b * num_heads * c_head * (N * N) * (N * N) * (h1 * w1)
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
+
+        macs_all = macs_conv2d + macs_attn
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
+
+
+# C x H x H
+# Intra-channel row attention(IRS)
+class CxHxH_Attention(nn.Module):
+    def __init__(self, dim, num_heads, bias):
+        super().__init__()
+        self.num_heads = num_heads
+        self.temperature = nn.Parameter(torch.ones(num_heads, 1, 1, 1))
+
+        self.qkv = nn.Conv2d(dim, dim * 3, kernel_size=1, bias=bias)
+        self.qkv_dwconv = nn.Conv2d(
+            dim * 3,
+            dim * 3,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            groups=dim * 3,
+            bias=bias,
+        )
+        self.project_out = nn.Conv2d(dim, dim, kernel_size=1, bias=bias)
+
+    def forward(self, x):
+        _, _, h, w = x.shape
+
+        qkv = self.qkv_dwconv(self.qkv(x))
+        q, k, v = qkv.chunk(3, dim=1)
+
+        q = rearrange(q, "b (head c) h w -> b head c h w", head=self.num_heads)
+        k = rearrange(k, "b (head c) h w -> b head c h w", head=self.num_heads)
+        v = rearrange(v, "b (head c) h w -> b head c h w", head=self.num_heads)
+
+        q = F.normalize(q, dim=-1)
+        k = F.normalize(k, dim=-1)
+
+        attn = (q @ k.transpose(-2, -1)) * self.temperature
+        # b,heads,c//heads,h,h
+        attn = attn.softmax(dim=-1)
+
+        out = attn @ v  # b,heads,c//heads,h,w
+        out = rearrange(out, "b head c h w -> b (head c) h w", head=self.num_heads, h=h, w=w)
+
+        out = self.project_out(out)
+        return out
+
+    @staticmethod
+    def CxHxH_macs(module, inputs, output):
+        """
+        Calculates MACs within CxHxH_Attention and adds them to module.total_ops.
+        """
+
+        x = inputs[0]
+        b, dim, h, w = x.shape
+        num_heads = module.num_heads
+        c_head = dim // num_heads
+
+        # Conv2d MACs
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+        # Attention
+        macs_attn_qk = b * num_heads * c_head * h * w * h
+        macs_temperature = b * num_heads * c_head * h * h
+        macs_attn_v = b * num_heads * c_head * h * h * w
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
+
+        macs_all = macs_conv2d + macs_attn
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
+
+
+# C x W x W
+# Intra-channel column(ICS)
+class CxWxW_Attention(nn.Module):
+    def __init__(self, dim, num_heads, bias):
+        super().__init__()
+        self.num_heads = num_heads
+        self.temperature = nn.Parameter(torch.ones(num_heads, 1, 1, 1))
+
+        self.qkv = nn.Conv2d(dim, dim * 3, kernel_size=1, bias=bias)
+        self.qkv_dwconv = nn.Conv2d(
+            dim * 3,
+            dim * 3,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            groups=dim * 3,
+            bias=bias,
+        )
+        self.project_out = nn.Conv2d(dim, dim, kernel_size=1, bias=bias)
+
+    def forward(self, x):
+        _, _, h, w = x.shape
+
+        qkv = self.qkv_dwconv(self.qkv(x))
+        q, k, v = qkv.chunk(3, dim=1)
+
+        q = rearrange(q, "b (head c) h w -> b head c w h", head=self.num_heads)
+        k = rearrange(k, "b (head c) h w -> b head c w h", head=self.num_heads)
+        v = rearrange(v, "b (head c) h w -> b head c w h", head=self.num_heads)
+
+        q = F.normalize(q, dim=-1)
+        k = F.normalize(k, dim=-1)
+
+        attn = (q @ k.transpose(-2, -1)) * self.temperature
+        # b,heads,c//heads,w,w
+        attn = attn.softmax(dim=-1)
+
+        out = attn @ v  # b,heads,c//heads,w,h
+        out = rearrange(out, "b head c w h-> b (head c) h w", head=self.num_heads, h=h, w=w)
+
+        out = self.project_out(out)
+        return out
+
+    @staticmethod
+    def CxWxW_macs(module, inputs, output):
+        x = inputs[0]
+        b, dim_in, h, w = x.shape
+        num_heads = module.num_heads
+        c_head = dim_in // num_heads
+
+        # Conv2d MACs
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
+        macs_qkv_dwconv = (
+            (module.qkv_dwconv.in_channels // module.qkv_dwconv.groups)
+            * module.qkv_dwconv.out_channels
+            * module.qkv_dwconv.kernel_size[0]
+            * module.qkv_dwconv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv_dwconv.bias is not None:
+            macs_qkv_dwconv += module.qkv_dwconv.out_channels * h * w
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
+        macs_conv2d = macs_qkv + macs_qkv_dwconv + macs_project_out
+
+        # Attention
+        macs_attn_qk = b * num_heads * c_head * w * h * w
+        macs_temperature = b * num_heads * c_head * w * w
+        macs_attn_v = b * num_heads * c_head * w * w * h
+
+        macs_attn = macs_attn_qk + macs_temperature + macs_attn_v
+
+        macs_all = macs_conv2d + macs_attn
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
 
 
 # TransformerBlocks
@@ -694,7 +1304,7 @@ class CNNxCNN_TransformerBlock(nn.Module):
         super().__init__()
 
         self.norm1 = LayerNorm(dim, LayerNorm_type)
-        self.attn = CNNxCNN_Attention(dim, num_heads, bias, blocks=8)
+        self.attn = CNNxCNN_Attention(dim, num_heads, bias)
         self.norm2 = LayerNorm(dim, LayerNorm_type)
         self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
 
@@ -710,7 +1320,7 @@ class CxNNxNN_TransformerBlock(nn.Module):
         super().__init__()
 
         self.norm1 = LayerNorm(dim, LayerNorm_type)
-        self.attn = CxNNxNN_Attention(dim, num_heads, bias, blocks=8)
+        self.attn = CxNNxNN_Attention(dim, num_heads, bias)
         self.norm2 = LayerNorm(dim, LayerNorm_type)
         self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
 
@@ -750,4 +1360,66 @@ class CxWxW_TransformerBlock(nn.Module):
         x = x + self.attn(self.norm1(x))
         x = x + self.ffn(self.norm2(x))
 
+        return x
+
+
+class HTA_ICST(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super().__init__()
+
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
+        self.attn1 = WxW_Attention(dim, num_heads, bias)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
+        self.attn2 = CxWxW_Attention(dim, num_heads, bias)
+        self.norm3 = LayerNorm(dim, LayerNorm_type)
+        self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
+
+    def forward(self, x):
+        x = x + self.attn1(self.norm1(x))
+        x = x + self.attn2(self.norm2(x))
+        x = x + self.ffn(self.norm3(x))
+
+        return x
+
+
+class WTA_IRST(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super().__init__()
+
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
+        self.attn1 = HxH_Attention(dim, num_heads, bias)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
+        self.attn2 = CxHxH_Attention(dim, num_heads, bias)
+        self.norm3 = LayerNorm(dim, LayerNorm_type)
+        self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
+
+    def forward(self, x):
+        x = x + self.attn1(self.norm1(x))
+        x = x + self.attn2(self.norm2(x))
+        x = x + self.ffn(self.norm3(x))
+
+        return x
+
+
+class DST(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super().__init__()
+        self.layer1 = HTA_ICST(dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type)
+        self.layer2 = WTA_IRST(dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type)
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
+        return x
+
+
+class IBCT(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super().__init__()
+        self.layer1 = CNNxCNN_TransformerBlock(dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type)
+        self.layer2 = CNNxCNN_TransformerBlock(dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type)
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
         return x

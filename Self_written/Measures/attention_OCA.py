@@ -135,32 +135,78 @@ class OCA(nn.Module):
 
         return out
 
+    def OCA_macs(module, inputs, output):
+        """
+        Calculates MACs within OCA and adds them to module.total_ops.
+        """
+        x = inputs[0]
+        b, dim, h, w = x.shape
+        num_heads = module.num_spatial_heads
+        dim_head = module.dim_head
+        inner_dim = module.inner_dim
+        window_size = module.window_size
+        overlap_win_size = module.overlap_win_size
 
-# ##########################################################################
-# class TransformerBlock(nn.Module):
-#     def __init__(self, dim, window_size, overlap_ratio, num_channel_heads, num_spatial_heads, spatial_dim_head, ffn_expansion_factor, bias, LayerNorm_type):
-#         super(TransformerBlock, self).__init__()
+        # Calculate MACs for Conv2d layers
+        # 1. MACs for qkv: input (b, dim, h, w), output (b, inner_dim * 3, h, w)
+        macs_qkv = (
+            module.qkv.in_channels
+            * module.qkv.out_channels
+            * module.qkv.kernel_size[0]
+            * module.qkv.kernel_size[1]
+            * h
+            * w
+        )
+        if module.qkv.bias is not None:
+            macs_qkv += module.qkv.out_channels * h * w
 
+        # 2. MACs for project_out: input (b, inner_dim, h, w), output (b, dim, h, w)
+        macs_project_out = (
+            module.project_out.in_channels
+            * module.project_out.out_channels
+            * module.project_out.kernel_size[0]
+            * module.project_out.kernel_size[1]
+            * h
+            * w
+        )
+        if module.project_out.bias is not None:
+            macs_project_out += module.project_out.out_channels * h * w
 
-#         self.spatial_attn = OCAB(dim, window_size, overlap_ratio, num_spatial_heads, spatial_dim_head, bias)
-#         self.channel_attn = ChannelAttention(dim, num_channel_heads, bias)
+        macs_conv2d = macs_qkv + macs_project_out
 
-#         self.norm1 = LayerNorm(dim, LayerNorm_type)
-#         self.norm2 = LayerNorm(dim, LayerNorm_type)
-#         self.norm3 = LayerNorm(dim, LayerNorm_type)
-#         self.norm4 = LayerNorm(dim, LayerNorm_type)
+        # Calculate MACs for attention
+        N_seq = window_size * window_size
+        overlap_seq = overlap_win_size * overlap_win_size
+        num_windows_h = h // window_size
+        num_windows_w = w // window_size
+        num_windows = num_windows_h * num_windows_w  # Total number of windows
 
-#         self.channel_ffn = FeedForward(dim, ffn_expansion_factor, bias)
-#         self.spatial_ffn = FeedForward(dim, ffn_expansion_factor, bias)
+        # Calculate MACs for attention
+        N_seq = window_size * window_size
+        overlap_seq = overlap_win_size * overlap_win_size
 
+        # 1. MACs for attention scores: qs @ ks.transpose(-2, -1)
+        macs_attn_qk = (b * num_windows * num_heads) * N_seq * dim_head * overlap_seq
 
-#     def forward(self, x):
-#         x = x + self.channel_attn(self.norm1(x))
-#         x = x + self.channel_ffn(self.norm2(x))
-#         x = x + self.spatial_attn(self.norm3(x))
-#         x = x + self.spatial_ffn(self.norm4(x))
-#         return x
-##########################################################################
+        # 2. MACs for relative positional embedding addition (Revised)
+        rel_size = window_size + (overlap_win_size - window_size)
+        rel_dim = rel_size * 2 - 1
+
+        macs_rel_logits_w = (b * num_windows * num_heads) * N_seq * rel_dim * dim_head
+        macs_rel_logits_h = (b * num_windows * num_heads) * N_seq * rel_dim * dim_head
+
+        macs_rel_pos_emb_internal = macs_rel_logits_w + macs_rel_logits_h
+
+        # macs_rel_pos_emb_additions = b * num_windows * num_heads * N_seq * overlap_seq
+
+        # 3. MACs for attention output: spatial_attn @ vs
+        macs_attn_v = (b * num_windows * num_heads) * N_seq * overlap_seq * dim_head
+        macs_attn = macs_attn_qk + macs_rel_pos_emb_internal + macs_attn_v
+
+        # Total MACs
+        macs_all = macs_conv2d + macs_attn
+
+        module.total_ops += torch.DoubleTensor([int(macs_all)])
 
 
 class OCA_TransformerBlock(nn.Module):

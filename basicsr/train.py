@@ -86,14 +86,18 @@ def init_loggers(opt):
     return logger, tb_logger
 
 
+# PrefetchDateLoader，DataLoader等诸多配置参数
 def create_train_val_dataloader(opt, logger):
     # create train and val dataloaders
     train_loader, val_loader = None, None
     for phase, dataset_opt in opt["datasets"].items():
-        if phase == "train":
+        if phase == "train":  # train字段
             dataset_enlarge_ratio = dataset_opt.get("dataset_enlarge_ratio", 1)  # 未设置则为default值1
-            train_set = create_dataset(dataset_opt)
+            train_set = create_dataset(dataset_opt)  # name:如Restormer,model_type:如ImageCleanModel
+
+            # train_smpler
             train_sampler = EnlargedSampler(train_set, opt["world_size"], opt["rank"], dataset_enlarge_ratio)
+            # train_loader
             train_loader = create_dataloader(
                 train_set,
                 dataset_opt,
@@ -105,7 +109,7 @@ def create_train_val_dataloader(opt, logger):
 
             num_iter_per_epoch = math.ceil(
                 len(train_set) * dataset_enlarge_ratio / (dataset_opt["batch_size_per_gpu"] * opt["world_size"])
-            )  # 计算epoch
+            )  # 计算epoch_periter
             total_iters = int(opt["train"]["total_iter"])
             total_epochs = math.ceil(total_iters / (num_iter_per_epoch))
             logger.info(
@@ -117,9 +121,12 @@ def create_train_val_dataloader(opt, logger):
                 f"\n\tRequire iter number per epoch: {num_iter_per_epoch}"
                 f"\n\tTotal epochs: {total_epochs}; iters: {total_iters}."
             )
-
-        elif phase == "val":
+        ##########
+        #####
+        ###
+        elif phase == "val":  # val字段
             val_set = create_dataset(dataset_opt)
+            # val_loader
             val_loader = create_dataloader(
                 val_set,
                 dataset_opt,
@@ -219,13 +226,15 @@ def main():
 
     iters = opt["datasets"]["train"].get("iters")
     batch_size = opt["datasets"]["train"].get("batch_size_per_gpu")
-    mini_batch_sizes = opt["datasets"]["train"].get("mini_batch_sizes")
+    # batch_size_per_gpu:控制迭代总epoch，每次总会抽出固定的样本数量，若当前mini_batch_per_gpu小于该数字，则舍弃部分样本，但还是取出固定数量的
+    mini_batch_sizes = opt["datasets"]["train"].get("mini_batch_sizes")  # mini_batch_per_gpu：当前patch_size的batch数量
     gt_size = opt["datasets"]["train"].get("gt_size")
     mini_gt_sizes = opt["datasets"]["train"].get("gt_sizes")
 
     groups = np.array([sum(iters[0 : i + 1]) for i in range(0, len(iters))])
+    # 计算iter数组前i项的总数,[92000,64000,48000,36000,36000,24000]既是[92000,156000,204000,240000,276000,300000]
 
-    logger_j = [True] * len(groups)
+    logger_j = [True] * len(groups)  # [True,True,True,True,True,Tre]
 
     scale = opt["scale"]
 
@@ -233,7 +242,7 @@ def main():
     while current_iter <= total_iters:
         train_sampler.set_epoch(epoch)
         prefetcher.reset()
-        train_data = prefetcher.next()
+        train_data = prefetcher.next()  # 读取数据
 
         while train_data is not None:
             data_time = time.time() - data_time
@@ -246,14 +255,19 @@ def main():
 
             ### ------Progressive learning ---------------------
             j = ((current_iter > groups) != True).nonzero()[0]
-            # current_iter > groups 是一个布尔数组,如[False,False,True,True],加上!=True,就变成了[False,False,True,True]
+            # j tells you which progressive learning stage you are currently in, or more precisely, which stages you haven't yet completed.
+            # current_iter > groups 是一个布尔数组,如[True,True,False,False,False,False],加上!=True,就变成了[False,False,True,True,True,True]
+            # nonzero():返回非零元素的索引（对于布尔数组，非零表示 True),即返回布尔数组中 True 值的索引,[0] means the first array,如[2,3,4,5]
             if len(j) == 0:
-                bs_j = len(groups) - 1  # bs_j代表着对应progressive learning的batch_size
+                bs_j = (
+                    len(groups) - 1
+                )  # bs_j代表着对应progressive learning的batch_size的索引;此时即是训练的最后一个阶段
             else:
-                bs_j = j[0]
+                bs_j = j[0]  # 否则取值为当前阶段的索引，如2
 
-            mini_gt_size = mini_gt_sizes[bs_j]
-            mini_batch_size = mini_batch_sizes[bs_j]
+            # 所以bs_j变量的作用是提供正确的索引，以确定size和batch
+            mini_gt_size = mini_gt_sizes[bs_j]  # 当前progressive learning阶段的mini_gt_sizess
+            mini_batch_size = mini_batch_sizes[bs_j]  # 当前progressive learning阶段的mini_batch_sizes
 
             if logger_j[bs_j]:
                 logger.info(
@@ -261,17 +275,19 @@ def main():
                         mini_gt_size, mini_batch_size * torch.cuda.device_count()
                     )
                 )
-                logger_j[bs_j] = False
+                logger_j[bs_j] = False  # 每个阶段只输出一次该信息
 
             lq = train_data["lq"]  # low quality
             gt = train_data["gt"]
 
-            if mini_batch_size < batch_size:  # 如果设定的batch_size_gpu比mini_batch_size大，那么就按照小的实现
+            if (
+                mini_batch_size < batch_size
+            ):  # 如果当前progressive learning的mini_batch_size比batch_size_per_gpu小，那么就按照小的实现。
                 indices = random.sample(range(0, batch_size), k=mini_batch_size)
                 lq = lq[indices]
                 gt = gt[indices]
 
-            if mini_gt_size < gt_size:
+            if mini_gt_size < gt_size:  # 如果当前的progressive learning的mini_gt_size小于gt_size,就裁剪
                 x0 = int((gt_size - mini_gt_size) * random.random())
                 y0 = int((gt_size - mini_gt_size) * random.random())
                 x1 = x0 + mini_gt_size

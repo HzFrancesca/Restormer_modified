@@ -26,12 +26,12 @@
   Macs: 9207825
   Params: 476
 ------------------------------
---- 处理 CNNxCNN_Attention ---
-  Macs: 15548440
+--- 处理 CNNxCNN_Attention ---(N=4)
+  Macs: 6049816
   Params: 476
 ----------------------------------
---- 处理 CxNNxNN_Attention ---
-  Macs: 9224210
+--- 处理 CxNNxNN_Attention ---(N=4)
+  Macs: 4474898
   Params: 476
 ----------------------------------
 --- 处理 CxHxH_Attention ---
@@ -41,5 +41,4 @@
 --- 处理 CxWxW_Attention ---
   Macs: 12410896
   Params: 476
---------------------------------
-所有指定的 Attention 模块处理完成。
+-------------------------------

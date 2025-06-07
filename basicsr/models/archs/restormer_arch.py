@@ -5,7 +5,9 @@
 
 import torch
 import torch.nn as nn
-from attentions import (
+from .attentions import (
+    DST,
+    IBCT,
     HWxHW_TransformerBlock,
     CxC_TransformerBlock,
     CHxCH_TransformerBlock,
@@ -69,8 +71,8 @@ class Restormer(nn.Module):
         inp_channels=3,
         out_channels=3,
         dim=48,
-        num_blocks=[4, 6, 6, 8],
-        num_refinement_blocks=4,
+        num_blocks=[2, 3, 3, 4],
+        num_refinement_blocks=2,
         heads=[1, 2, 4, 8],
         ffn_expansion_factor=2.66,
         bias=False,
@@ -83,7 +85,7 @@ class Restormer(nn.Module):
 
         self.encoder_level1 = nn.Sequential(
             *[
-                CxC_TransformerBlock(
+                IBCT(
                     dim=dim,
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -97,7 +99,7 @@ class Restormer(nn.Module):
         self.down1_2 = Downsample(dim)  ## From Level 1 to Level 2
         self.encoder_level2 = nn.Sequential(
             *[
-                CxC_TransformerBlock(
+                DST(
                     dim=int(dim * 2**1),
                     num_heads=heads[1],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -111,7 +113,7 @@ class Restormer(nn.Module):
         self.down2_3 = Downsample(int(dim * 2**1))  ## From Level 2 to Level 3
         self.encoder_level3 = nn.Sequential(
             *[
-                CxC_TransformerBlock(
+                DST(
                     dim=int(dim * 2**2),
                     num_heads=heads[2],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -125,7 +127,7 @@ class Restormer(nn.Module):
         self.down3_4 = Downsample(int(dim * 2**2))  ## From Level 3 to Level 4
         self.latent = nn.Sequential(
             *[
-                CxC_TransformerBlock(
+                DST(
                     dim=int(dim * 2**3),
                     num_heads=heads[3],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -140,7 +142,7 @@ class Restormer(nn.Module):
         self.reduce_chan_level3 = nn.Conv2d(int(dim * 2**3), int(dim * 2**2), kernel_size=1, bias=bias)
         self.decoder_level3 = nn.Sequential(
             *[
-                CxC_TransformerBlock(
+                DST(
                     dim=int(dim * 2**2),
                     num_heads=heads[2],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -155,7 +157,7 @@ class Restormer(nn.Module):
         self.reduce_chan_level2 = nn.Conv2d(int(dim * 2**2), int(dim * 2**1), kernel_size=1, bias=bias)
         self.decoder_level2 = nn.Sequential(
             *[
-                CxC_TransformerBlock(
+                DST(
                     dim=int(dim * 2**1),
                     num_heads=heads[1],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -170,7 +172,7 @@ class Restormer(nn.Module):
 
         self.decoder_level1 = nn.Sequential(
             *[
-                CxC_TransformerBlock(
+                IBCT(
                     dim=int(dim * 2**1),
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -183,7 +185,7 @@ class Restormer(nn.Module):
 
         self.refinement = nn.Sequential(
             *[
-                CxC_TransformerBlock(
+                IBCT(
                     dim=int(dim * 2**1),
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,

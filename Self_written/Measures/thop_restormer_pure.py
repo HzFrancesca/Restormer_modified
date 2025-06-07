@@ -12,6 +12,7 @@ from attentions import (
     CxHxH_TransformerBlock,
     CxWxW_TransformerBlock,
 )
+from attention_OCA import OCA_TransformerBlock
 
 
 ##########################################################################
@@ -78,7 +79,7 @@ class Restormer(nn.Module):
 
         self.encoder_level1 = nn.Sequential(
             *[
-                CNNxCNN_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=dim,
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -92,7 +93,7 @@ class Restormer(nn.Module):
         self.down1_2 = Downsample(dim)  ## From Level 1 to Level 2
         self.encoder_level2 = nn.Sequential(
             *[
-                CNNxCNN_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**1),
                     num_heads=heads[1],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -106,7 +107,7 @@ class Restormer(nn.Module):
         self.down2_3 = Downsample(int(dim * 2**1))  ## From Level 2 to Level 3
         self.encoder_level3 = nn.Sequential(
             *[
-                CNNxCNN_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**2),
                     num_heads=heads[2],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -120,7 +121,7 @@ class Restormer(nn.Module):
         self.down3_4 = Downsample(int(dim * 2**2))  ## From Level 3 to Level 4
         self.latent = nn.Sequential(
             *[
-                CNNxCNN_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**3),
                     num_heads=heads[3],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -135,7 +136,7 @@ class Restormer(nn.Module):
         self.reduce_chan_level3 = nn.Conv2d(int(dim * 2**3), int(dim * 2**2), kernel_size=1, bias=bias)
         self.decoder_level3 = nn.Sequential(
             *[
-                CNNxCNN_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**2),
                     num_heads=heads[2],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -150,7 +151,7 @@ class Restormer(nn.Module):
         self.reduce_chan_level2 = nn.Conv2d(int(dim * 2**2), int(dim * 2**1), kernel_size=1, bias=bias)
         self.decoder_level2 = nn.Sequential(
             *[
-                CNNxCNN_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**1),
                     num_heads=heads[1],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -165,7 +166,7 @@ class Restormer(nn.Module):
 
         self.decoder_level1 = nn.Sequential(
             *[
-                CNNxCNN_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**1),
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -178,7 +179,7 @@ class Restormer(nn.Module):
 
         self.refinement = nn.Sequential(
             *[
-                CNNxCNN_TransformerBlock(
+                OCA_TransformerBlock(
                     dim=int(dim * 2**1),
                     num_heads=heads[0],
                     ffn_expansion_factor=ffn_expansion_factor,
@@ -235,3 +236,62 @@ class Restormer(nn.Module):
             out_dec_level1 = self.output(out_dec_level1) + inp_img
 
         return out_dec_level1
+
+
+if __name__ == "__main__":
+    import torch
+    from thop import profile, clever_format
+    from attention_OCA import OCA
+    from attentions import (
+        HWxHW_Attention,
+        CxC_Attention,
+        CHxCH_Attention,
+        WxW_Attention,
+        CWxCW_Attention,
+        HxH_Attention,
+        CNNxCNN_Attention,
+        CxNNxNN_Attention,
+        CxHxH_Attention,
+        CxWxW_Attention,
+    )
+    import os
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    custom_ops = {
+        HWxHW_Attention: HWxHW_Attention.HWxHW_macs,
+        CxC_Attention: CxC_Attention.CxC_macs,
+        CHxCH_Attention: CHxCH_Attention.CHxCH_macs,
+        WxW_Attention: WxW_Attention.WxW_macs,
+        CWxCW_Attention: CWxCW_Attention.CWxCW_macs,
+        HxH_Attention: HxH_Attention.HxH_macs,
+        CNNxCNN_Attention: CNNxCNN_Attention.CNNxCNN_macs,
+        CxNNxNN_Attention: CxNNxNN_Attention.CxNNxNN_macs,
+        CxHxH_Attention: CxHxH_Attention.CxHxH_macs,
+        CxWxW_Attention: CxWxW_Attention.CxWxW_macs,
+        OCA: OCA.OCA_macs,
+    }
+
+    dummy_input = torch.randn(1, 3, 128, 128).to(device)  # (batch_size, channels, height, width)
+
+    model = Restormer(
+        inp_channels=3,
+        out_channels=3,
+        dim=48,
+        num_blocks=[4, 6, 6, 8],
+        num_refinement_blocks=4,
+        heads=[1, 2, 4, 8],
+        ffn_expansion_factor=2.66,
+        bias=False,
+        LayerNorm_type="WithBias",
+        dual_pixel_task=False,
+    )
+    model.to(device)
+    # macs, _ = profile(model, inputs=(dummy_input,), verbose=True)
+    macs, _ = profile(model, inputs=(dummy_input,), custom_ops=custom_ops, verbose=True)
+    params = sum(p.numel() for p in model.parameters())
+    macs_formatted, params_formatted = clever_format([macs, params], "%.3f")
+
+    # MACs (Multiply-Accumulate Operations)
+    print(f"Model MACs: {macs_formatted}")
+    print(f"Model Params: {params_formatted}")

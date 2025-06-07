@@ -1,0 +1,40 @@
+Testing model: HWxHW_Attention
+Model MACs: 757.875M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: CxC_Attention
+Model MACs: 3.097M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: CHxCH_Attention
+Model MACs: 15.548M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: WxW_Attention
+Model MACs: 12.374M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: CWxCW_Attention
+Model MACs: 21.922M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: HxH_Attention
+Model MACs: 9.208M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: CNNxCNN_Attention(N=4)
+Model MACs: 6.050M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: CxNNxNN_Attention(N=4)
+Model MACs: 4.475M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: CxHxH_Attention
+Model MACs: 9.224M
+Model Params: 472.000B
+--------------------------------------------------
+Testing model: CxWxW_Attention
+Model MACs: 12.411M
+Model Params: 472.000B
+--------------------------------------------------

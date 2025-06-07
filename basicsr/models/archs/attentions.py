@@ -143,6 +143,48 @@ class HWxHW_Attention(nn.Module):
         return out
 
 
+class HWxHW_Attention_Norm(nn.Module):
+    def __init__(self, dim, num_heads, bias):
+        super().__init__()
+        self.num_heads = num_heads
+        self.temperature = nn.Parameter(torch.ones(num_heads, 1, 1))
+
+        self.qkv = nn.Conv2d(dim, dim * 3, kernel_size=1, bias=bias)
+        self.qkv_dwconv = nn.Conv2d(
+            dim * 3,
+            dim * 3,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            groups=dim * 3,
+            bias=bias,
+        )
+        self.project_out = nn.Conv2d(dim, dim, kernel_size=1, bias=bias)
+
+    def forward(self, x):
+        _, _, h, w = x.shape
+
+        qkv = self.qkv_dwconv(self.qkv(x))
+        q, k, v = qkv.chunk(3, dim=1)
+
+        q = rearrange(q, "b c h w -> b (h w) c")
+        k = rearrange(k, "b c h w -> b (h w) c")
+        v = rearrange(v, "b c h w -> b (h w) c")
+
+        q = F.normalize(q, dim=-1)
+        k = F.normalize(k, dim=-1)
+
+        attn = (q @ k.transpose(-2, -1)) * self.temperature
+        # b,heads,h*w,h*w
+        attn = attn.softmax(dim=-1)
+
+        out = attn @ v  # b,heads,h*w,c//heads
+        out = rearrange(out, "b (h w) c -> b c h w", head=self.num_heads, h=h, w=w)
+
+        out = self.project_out(out)
+        return out
+
+
 # C X C
 class CxC_Attention(nn.Module):
     def __init__(self, dim, num_heads, bias):
@@ -231,6 +273,7 @@ class CHxCH_Attention(nn.Module):
 
 
 # WxW
+# HTA(Height-stack transposed attention)
 class WxW_Attention(nn.Module):
     def __init__(self, dim, num_heads, bias):
         super().__init__()
@@ -318,6 +361,7 @@ class CWxCW_Attention(nn.Module):
 
 
 # H x H
+# Width-stack transposed-attention(WTA)
 class HxH_Attention(nn.Module):
     def __init__(self, dim, num_heads, bias):
         super().__init__()
@@ -362,7 +406,8 @@ class HxH_Attention(nn.Module):
         return out
 
 
-# Inter-channel blocks:C*N*N x C*N*N
+# C*N*N x C*N*N
+# Inter-channel block cross-attention(IBS)
 class CNNxCNN_Attention(nn.Module):
     def __init__(self, dim, num_heads, bias, blocks=4):
         super().__init__()
@@ -434,7 +479,8 @@ class CNNxCNN_Attention(nn.Module):
         return out
 
 
-# Intra-channel row: C x H x H
+# C x H x H
+# Intra-channel row attention(IRS)
 class CxHxH_Attention(nn.Module):
     def __init__(self, dim, num_heads, bias):
         super().__init__()
@@ -477,7 +523,8 @@ class CxHxH_Attention(nn.Module):
         return out
 
 
-# Intra-channel column:C x W x W
+# C x W x W
+# Intra-channel column(ICS)
 class CxWxW_Attention(nn.Module):
     def __init__(self, dim, num_heads, bias):
         super().__init__()
@@ -750,4 +797,82 @@ class CxWxW_TransformerBlock(nn.Module):
         x = x + self.attn(self.norm1(x))
         x = x + self.ffn(self.norm2(x))
 
+        return x
+
+
+class HTA_ICST(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super().__init__()
+
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
+        self.attn1 = WxW_Attention(dim, num_heads, bias)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
+        self.attn2 = CxWxW_Attention(dim, num_heads, bias)
+        self.norm3 = LayerNorm(dim, LayerNorm_type)
+        self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
+
+    def forward(self, x):
+        x = x + self.attn1(self.norm1(x))
+        x = x + self.attn2(self.norm2(x))
+        x = x + self.ffn(self.norm3(x))
+
+        return x
+
+
+class WTA_IRST(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super().__init__()
+
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
+        self.attn1 = HxH_Attention(dim, num_heads, bias)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
+        self.attn2 = CxHxH_Attention(dim, num_heads, bias)
+        self.norm3 = LayerNorm(dim, LayerNorm_type)
+        self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
+
+    def forward(self, x):
+        x = x + self.attn1(self.norm1(x))
+        x = x + self.attn2(self.norm2(x))
+        x = x + self.ffn(self.norm3(x))
+
+        return x
+
+
+class DST(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super().__init__()
+        self.layer1 = HTA_ICST(dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type)
+        self.layer2 = WTA_IRST(dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type)
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
+        return x
+
+
+# class IBCT(nn.Module):
+#     def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+#         super().__init__()
+
+#         self.norm1 = LayerNorm(dim, LayerNorm_type)
+#         self.attn = CxNNxNN_Attention(dim, num_heads, bias)
+#         self.norm2 = LayerNorm(dim, LayerNorm_type)
+#         self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
+
+#     def forward(self, x):
+#         x = x + self.attn(self.norm1(x))
+#         x = x + self.ffn(self.norm2(x))
+
+#         return x
+
+
+class IBCT(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super().__init__()
+        self.layer1 = CNNxCNN_TransformerBlock(dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type)
+        self.layer2 = CNNxCNN_TransformerBlock(dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type)
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
         return x
