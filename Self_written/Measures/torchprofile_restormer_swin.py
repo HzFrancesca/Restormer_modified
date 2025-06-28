@@ -208,11 +208,17 @@ class WindowAttention(nn.Module):
             mask: (0/-inf) mask with shape of (num_windows, Wh*Ww, Wh*Ww) or None
         """
         B_, N, C = x.shape
+
+        # print(f"WindowAttention: input x shape (B_, N, C): {B_, N, C}")
+        # print(f"WindowAttention: self.num_heads: {self.num_heads}")
+        # print(f"WindowAttention: self.window_size: {self.window_size}")
+
         qkv = self.qkv(x).reshape(B_, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
 
         q = q * self.scale
         attn = q @ k.transpose(-2, -1)
+        # print(f"WindowAttention: attn shape before mask: {attn.shape}") # Should be (B_, self.num_heads, N, N)
 
         relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
             self.window_size[0] * self.window_size[1], self.window_size[0] * self.window_size[1], -1
@@ -222,6 +228,11 @@ class WindowAttention(nn.Module):
 
         if mask is not None:
             nW = mask.shape[0]
+            # print(f"WindowAttention: mask shape: {mask.shape}")
+            # print(f"WindowAttention: nW from mask: {nW}")
+            # print(f"WindowAttention: Attempting to reshape attn to: ({B_ // nW}, {nW}, {self.num_heads}, {N}, {N})")
+            # print(f"WindowAttention: Total elements in attn: {attn.numel()}")
+            # print(f"WindowAttention: Expected elements for reshape: { (B_ // nW) * nW * self.num_heads * N * N}")
             attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
             attn = self.softmax(attn)
@@ -286,6 +297,7 @@ class SwinTransformerBlock(nn.Module):
         self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
 
         self.attn_mask = None
+        self._current_mask_shape_tag = None
 
     def calculate_mask(self, x_size):
         # 计算 SW-MSA 的 attention mask
@@ -315,35 +327,50 @@ class SwinTransformerBlock(nn.Module):
         return attn_mask
 
     def forward(self, x):
-        b, c, h, w = x.shape
+        b, c, h_og, w_og = x.shape  # 获取原始高度和宽度
         shortcut = x
 
         # LayerNorm
-        x = self.norm1(x)  # b, c, h, w
+        x = self.norm1(x)  # b, c, h_og, w_og
+
+        # 计算填充量并进行填充
+        pad_b = (self.window_size - h_og % self.window_size) % self.window_size
+        pad_r = (self.window_size - w_og % self.window_size) % self.window_size
+
+        if pad_b > 0 or pad_r > 0:
+            x = F.pad(x, (0, pad_r, 0, pad_b))  # (pad_left, pad_right, pad_top, pad_bottom)
+
+        b, c, h_pad, w_pad = x.shape  # 获取填充后的高度和宽度
 
         # 转换为 BHWC 格式进行窗口划分
-        x = x.permute(0, 2, 3, 1)  # B, H, W, C
+        x = x.permute(0, 2, 3, 1)  # B, H_pad, W_pad, C
 
         # 如果使用移位窗口
         if self.shift_size > 0:
             shifted_x = torch.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
-            # 计算 attention mask
-            if self.attn_mask is None:
-                self.attn_mask = self.calculate_mask((h, w)).to(x.device)
+            # 计算 attention mask，使用填充后的 H_pad, W_pad
+            current_shape_tag_for_mask = (h_pad, w_pad)
+            if self._current_mask_shape_tag != current_shape_tag_for_mask or self.attn_mask is None:
+                # Debug print: 确认这里触发了 mask 的重新计算
+                print(f"SwinTransformerBlock: Recalculating mask for shape: {current_shape_tag_for_mask}")
+                self.attn_mask = self.calculate_mask((h_pad, w_pad)).to(x.device)
+                self._current_mask_shape_tag = current_shape_tag_for_mask
+                # Debug print: 确认计算后的 mask 维度
+                print(f"SwinTransformerBlock: New mask shape: {self.attn_mask.shape}")
         else:
             shifted_x = x
             self.attn_mask = None
 
-        # 窗口分割
+        # 窗口分割 (使用填充后的 H_pad, W_pad)
         x_windows = window_partition(shifted_x, self.window_size)  # nW*B, window_size, window_size, C
         x_windows = x_windows.view(-1, self.window_size * self.window_size, c)  # nW*B, window_size*window_size, C
 
         # W-MSA/SW-MSA
         attn_windows = self.attn(x_windows, mask=self.attn_mask)  # nW*B, window_size*window_size, C
 
-        # 合并窗口
+        # 合并窗口 (使用填充后的 H_pad, W_pad)
         attn_windows = attn_windows.view(-1, self.window_size, self.window_size, c)
-        shifted_x = window_reverse(attn_windows, self.window_size, h, w)  # B, H, W, C
+        shifted_x = window_reverse(attn_windows, self.window_size, h_pad, w_pad)  # B, H_pad, W_pad, C
 
         # 如果使用了移位窗口，反向移位恢复原始位置
         if self.shift_size > 0:
@@ -352,13 +379,66 @@ class SwinTransformerBlock(nn.Module):
             x = shifted_x
 
         # 转换回BCHW格式
-        x = x.permute(0, 3, 1, 2)  # B, C, H, W
+        x = x.permute(0, 3, 1, 2)  # B, C, H_pad, W_pad
+
+        # 如果进行了填充，裁剪回原始尺寸
+        if pad_b > 0 or pad_r > 0:
+            x = x[:, :, :h_og, :w_og]  # B, C, H_og, W_og
 
         # FFN
+        # shortcut 的尺寸是 (B, C, H_og, W_og)
+        # x 此刻的尺寸也是 (B, C, H_og, W_og)
         x = shortcut + self.drop_path(x)
         x = x + self.drop_path(self.ffn(self.norm2(x)))
 
         return x
+
+    # 原forward
+    # def forward(self, x):
+    #     b, c, h, w = x.shape
+    #     shortcut = x
+
+    #     # LayerNorm
+    #     x = self.norm1(x)  # b, c, h, w
+
+    #     # 转换为 BHWC 格式进行窗口划分
+    #     x = x.permute(0, 2, 3, 1)  # B, H, W, C
+
+    #     # 如果使用移位窗口
+    #     if self.shift_size > 0:
+    #         shifted_x = torch.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
+    #         # 计算 attention mask
+    #         if self.attn_mask is None:
+    #             self.attn_mask = self.calculate_mask((h, w)).to(x.device)
+    #     else:
+    #         shifted_x = x
+    #         self.attn_mask = None
+
+    #     # 窗口分割
+    #     x_windows = window_partition(shifted_x, self.window_size)  # nW*B, window_size, window_size, C
+    #     x_windows = x_windows.view(-1, self.window_size * self.window_size, c)  # nW*B, window_size*window_size, C
+
+    #     # W-MSA/SW-MSA
+    #     attn_windows = self.attn(x_windows, mask=self.attn_mask)  # nW*B, window_size*window_size, C
+
+    #     # 合并窗口
+    #     attn_windows = attn_windows.view(-1, self.window_size, self.window_size, c)
+    #     shifted_x = window_reverse(attn_windows, self.window_size, h, w)  # B, H, W, C
+
+    #     # 如果使用了移位窗口，反向移位恢复原始位置
+    #     if self.shift_size > 0:
+    #         x = torch.roll(shifted_x, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
+    #     else:
+    #         x = shifted_x
+
+    #     # 转换回BCHW格式
+    #     x = x.permute(0, 3, 1, 2)  # B, C, H, W
+
+    #     # FFN
+    #     x = shortcut + self.drop_path(x)
+    #     x = x + self.drop_path(self.ffn(self.norm2(x)))
+
+    #     return x
 
 
 ##########################################################################
@@ -416,7 +496,8 @@ class Restormer(nn.Module):
                     dim=dim,
                     num_heads=heads[0],
                     window_size=window_size,
-                    shift_size=0 if (i % 2 == 0) else window_size // 2,
+                    shift_size=0,
+                    # shift_size=0 if (i % 2 == 0) else window_size // 2,
                     ffn_expansion_factor=ffn_expansion_factor,
                     bias=bias,
                     LayerNorm_type=LayerNorm_type,
@@ -432,7 +513,8 @@ class Restormer(nn.Module):
                     dim=int(dim * 2**1),
                     num_heads=heads[1],
                     window_size=window_size,
-                    shift_size=0 if (i % 2 == 0) else window_size // 2,
+                    shift_size=0,
+                    # shift_size=0 if (i % 2 == 0) else window_size // 2,
                     ffn_expansion_factor=ffn_expansion_factor,
                     bias=bias,
                     LayerNorm_type=LayerNorm_type,
@@ -448,7 +530,8 @@ class Restormer(nn.Module):
                     dim=int(dim * 2**2),
                     num_heads=heads[2],
                     window_size=window_size,
-                    shift_size=0 if (i % 2 == 0) else window_size // 2,
+                    shift_size=0,
+                    # shift_size=0 if (i % 2 == 0) else window_size // 2,
                     ffn_expansion_factor=ffn_expansion_factor,
                     bias=bias,
                     LayerNorm_type=LayerNorm_type,
@@ -464,7 +547,8 @@ class Restormer(nn.Module):
                     dim=int(dim * 2**3),
                     num_heads=heads[3],
                     window_size=window_size,
-                    shift_size=0 if (i % 2 == 0) else window_size // 2,
+                    shift_size=0,
+                    # shift_size=0 if (i % 2 == 0) else window_size // 2,
                     ffn_expansion_factor=ffn_expansion_factor,
                     bias=bias,
                     LayerNorm_type=LayerNorm_type,
@@ -481,7 +565,8 @@ class Restormer(nn.Module):
                     dim=int(dim * 2**2),
                     num_heads=heads[2],
                     window_size=window_size,
-                    shift_size=0 if (i % 2 == 0) else window_size // 2,
+                    shift_size=0,
+                    # shift_size=0 if (i % 2 == 0) else window_size // 2,
                     ffn_expansion_factor=ffn_expansion_factor,
                     bias=bias,
                     LayerNorm_type=LayerNorm_type,
@@ -498,7 +583,8 @@ class Restormer(nn.Module):
                     dim=int(dim * 2**1),
                     num_heads=heads[1],
                     window_size=window_size,
-                    shift_size=0 if (i % 2 == 0) else window_size // 2,
+                    shift_size=0,
+                    # shift_size=0 if (i % 2 == 0) else window_size // 2,
                     ffn_expansion_factor=ffn_expansion_factor,
                     bias=bias,
                     LayerNorm_type=LayerNorm_type,
@@ -515,6 +601,7 @@ class Restormer(nn.Module):
                     dim=int(dim * 2**1),
                     num_heads=heads[0],
                     window_size=window_size,
+                    # shift_size=0,
                     shift_size=0 if (i % 2 == 0) else window_size // 2,
                     ffn_expansion_factor=ffn_expansion_factor,
                     bias=bias,
@@ -530,7 +617,8 @@ class Restormer(nn.Module):
                     dim=int(dim * 2**1),
                     num_heads=heads[0],
                     window_size=window_size,
-                    shift_size=0 if (i % 2 == 0) else window_size // 2,
+                    shift_size=0,
+                    # shift_size=0 if (i % 2 == 0) else window_size // 2,
                     ffn_expansion_factor=ffn_expansion_factor,
                     bias=bias,
                     LayerNorm_type=LayerNorm_type,

@@ -1,5 +1,5 @@
 # general settings
-name: Deraining_Restormer_Max320_442111
+name: Deraining_Restormer_Max320_CxC_456000
 model_type: ImageCleanModel
 scale: 1
 num_gpu: 1 # set num_gpu: 0 for cpu mode
@@ -21,28 +21,13 @@ datasets:
     # data loader
     use_shuffle: true
     num_worker_per_gpu: 0
-    batch_size_per_gpu: 8
-
-    # ### -------------Progressive training--------------------------
-    # mini_batch_sizes:  [6,4,2,1,1,1]         # Batch size per gpu
-    # iters: [128000,100000,96000,72000,36000,24000]
-    # gt_size: 384   # Max patch size for progressive training
-    # gt_sizes: [128,160,192,256,288,320] # Patch sizes for progressive training.
-    # ### ------------------------------------------------------------
+    batch_size_per_gpu: 6
 
     ### -------------Progressive training--------------------------
-    mini_batch_sizes:  [4,4,2,1,1,1]         # Batch size per gpu
-    iters: [184000,128000,96000,72000,36000,24000]
+    mini_batch_sizes:  [6,4,2,1,1,1]         # Batch size per gpu
+    iters: [128000,100000,96000,72000,36000,24000]
     gt_size: 320   # Max patch size for progressive training
     gt_sizes: [128,160,192,256,288,320] # Patch sizes for progressive training.
-    ### ------------------------------------------------------------
-
-
-    ### ------- Training on single fixed-patch size 128x128---------
-    # mini_batch_sizes: [8]   
-    # iters: [300000]
-    # gt_size: 128   
-    # gt_sizes: [128]
     ### ------------------------------------------------------------
 
     dataset_enlarge_ratio: 1
@@ -62,7 +47,7 @@ network_g:
   inp_channels: 3
   out_channels: 3
   dim: 48
-  num_blocks: [4,6,6,8]
+  num_blocks:  [4,6,6,8]
   num_refinement_blocks: 4
   heads: [1,2,4,8]
   ffn_expansion_factor: 2.66
@@ -79,7 +64,7 @@ path:
 
 # training settings
 train:
-  total_iter: 536000
+  total_iter: 456000
   warmup_iter: -1 # no warm up
   use_grad_clip: true
 
@@ -88,7 +73,7 @@ train:
   # 2nd cycle: cosine annealing (3e-4 to 1e-6) for 208k iters.
   scheduler:
     type: CosineAnnealingRestartCyclicLR
-    periods: [184000, 352000]
+    periods: [128000, 328000]
     restart_weights: [1,1]
     eta_mins: [0.0003,0.000001]   
   

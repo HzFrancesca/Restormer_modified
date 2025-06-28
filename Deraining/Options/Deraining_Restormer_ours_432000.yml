@@ -1,5 +1,5 @@
 # general settings
-name: Deraining_Restormer_Max320_642111
+name: Deraining_Restormer_CxC_Max320_432000
 model_type: ImageCleanModel
 scale: 1
 num_gpu: 1 # set num_gpu: 0 for cpu mode
@@ -25,7 +25,7 @@ datasets:
 
     ### -------------Progressive training--------------------------
     mini_batch_sizes:  [6,4,2,1,1,1]         # Batch size per gpu
-    iters: [128000,100000,96000,72000,36000,24000]
+    iters: [124000,80000,96000,72000,36000,24000]
     gt_size: 320   # Max patch size for progressive training
     gt_sizes: [128,160,192,256,288,320] # Patch sizes for progressive training.
     ### ------------------------------------------------------------
@@ -64,7 +64,7 @@ path:
 
 # training settings
 train:
-  total_iter: 456000
+  total_iter: 432000
   warmup_iter: -1 # no warm up
   use_grad_clip: true
 
@@ -73,7 +73,7 @@ train:
   # 2nd cycle: cosine annealing (3e-4 to 1e-6) for 208k iters.
   scheduler:
     type: CosineAnnealingRestartCyclicLR
-    periods: [128000, 328000]
+    periods: [124000, 308000]
     restart_weights: [1,1]
     eta_mins: [0.0003,0.000001]   
   

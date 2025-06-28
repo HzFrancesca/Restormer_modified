@@ -1,7 +1,9 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pdb import set_trace as stx
+
+# from pdb import set_trace as stx
 import numbers
 
 from einops import rearrange
@@ -848,22 +850,6 @@ class DST(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         return x
-
-
-# class IBCT(nn.Module):
-#     def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
-#         super().__init__()
-
-#         self.norm1 = LayerNorm(dim, LayerNorm_type)
-#         self.attn = CxNNxNN_Attention(dim, num_heads, bias)
-#         self.norm2 = LayerNorm(dim, LayerNorm_type)
-#         self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
-
-#     def forward(self, x):
-#         x = x + self.attn(self.norm1(x))
-#         x = x + self.ffn(self.norm2(x))
-
-#         return x
 
 
 class IBCT(nn.Module):

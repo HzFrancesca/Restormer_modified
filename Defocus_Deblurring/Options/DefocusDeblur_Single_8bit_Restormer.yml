@@ -1,8 +1,8 @@
 # general settings
-name: DefocusDeblur_Single_8bit_Restormer
+name: DefocusDeblur_Single_Max320_CxC_432000
 model_type: ImageCleanModel
 scale: 1
-num_gpu: 8  # set num_gpu: 0 for cpu mode
+num_gpu: 1  # set num_gpu: 0 for cpu mode
 manual_seed: 100
 
 # dataset and data loader settings
@@ -20,15 +20,15 @@ datasets:
 
     # data loader
     use_shuffle: true
-    num_worker_per_gpu: 8
-    batch_size_per_gpu: 8
+    num_worker_per_gpu: 0
+    batch_size_per_gpu: 6
 
     ### -------------Progressive training--------------------------
-    mini_batch_sizes: [8,5,4,2,1,1]             # Batch size per gpu   
-    iters: [92000,64000,48000,36000,36000,24000]
-    gt_size: 384   # Max patch size for progressive training
-    gt_sizes: [128,160,192,256,320,384]  # Patch sizes for progressive training.
-    ### ------------------------------------------------------------
+    mini_batch_sizes: [6,4,2,1,1,1]             # Batch size per gpu
+    iters: [124000,80000,96000,72000,36000,24000]
+    gt_size: 320   # Max patch size for progressive training
+    gt_sizes: [128,160,192,256,288,320]  # Patch sizes for progressive training.
+
 
     ### ------- Training on single fixed-patch size 128x128---------
     # mini_batch_sizes: [8]   
@@ -71,7 +71,7 @@ path:
 
 # training settings
 train:
-  total_iter: 300000
+  total_iter: 432000
   warmup_iter: -1 # no warm up
   use_grad_clip: true
 
@@ -80,7 +80,7 @@ train:
   # 2nd cycle: cosine annealing (3e-4 to 1e-6) for 208k iters.
   scheduler:
     type: CosineAnnealingRestartCyclicLR
-    periods: [92000, 208000]       
+    periods: [124000, 308000]
     restart_weights: [1,1]
     eta_mins: [0.0003,0.000001]   
   
@@ -126,6 +126,6 @@ logger:
     resume_id: ~
 
 # dist training settings
-dist_params:
-  backend: nccl
-  port: 29500
+#dist_params:
+#  backend: nccl
+#  port: 29500
