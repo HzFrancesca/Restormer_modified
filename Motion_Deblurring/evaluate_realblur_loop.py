@@ -112,24 +112,29 @@ def proc(filename):
 
 datasets = ["RealBlur_J", "RealBlur_R"]
 
-for dataset in datasets:
-    file_path = os.path.join("results", dataset)
-    gt_path = os.path.join("Datasets", "test", dataset, "target")
+if __name__ == "__main__":
+    start_number = 396000
+    end_number = 432000
+    step = 4000
+    for number in range(start_number, end_number + 1, step):
+        print(f"--- Processing iteration: {number} ---")
+        for dataset in datasets:
+            file_path = os.path.join("results", dataset)
+            gt_path = os.path.join("Datasets", "test", dataset, "target")
 
-    path_list = natsorted(glob(os.path.join(file_path, "*.png")) + glob(os.path.join(file_path, "*.jpg")))
-    gt_list = natsorted(glob(os.path.join(gt_path, "*.png")) + glob(os.path.join(gt_path, "*.jpg")))
+            path_list = natsorted(glob(os.path.join(file_path, "*.png")) + glob(os.path.join(file_path, "*.jpg")))
+            gt_list = natsorted(glob(os.path.join(gt_path, "*.png")) + glob(os.path.join(gt_path, "*.jpg")))
 
-    assert len(path_list) != 0, "Predicted files not found"
-    assert len(gt_list) != 0, "Target files not found"
+            assert len(path_list) != 0, "Predicted files not found"
+            assert len(gt_list) != 0, "Target files not found"
 
-    psnr, ssim = [], []
-    img_files = [(i, j) for i, j in zip(gt_list, path_list)]
-    with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
-        for filename, PSNR_SSIM in zip(img_files, executor.map(proc, img_files)):
-            psnr.append(PSNR_SSIM[0])
-            ssim.append(PSNR_SSIM[1])
+            psnr, ssim = [], []
+            img_files = [(i, j) for i, j in zip(gt_list, path_list)]
+            with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+                for filename, PSNR_SSIM in zip(img_files, executor.map(proc, img_files)):
+                    psnr.append(PSNR_SSIM[0])
+                    ssim.append(PSNR_SSIM[1])
 
-    avg_psnr = sum(psnr) / len(psnr)
-    avg_ssim = sum(ssim) / len(ssim)
-
-    print("For {:s} dataset PSNR: {:f} SSIM: {:f}\n".format(dataset, avg_psnr, avg_ssim))
+            avg_psnr = sum(psnr) / len(psnr)
+            avg_ssim = sum(ssim) / len(ssim)
+            print("For {:s} dataset PSNR: {:f} SSIM: {:f}\n".format(dataset, avg_psnr, avg_ssim))
