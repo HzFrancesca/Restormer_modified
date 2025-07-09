@@ -114,31 +114,58 @@ class qkv_transform(nn.Conv1d):
 
 class AxialAttention(nn.Module):
     def __init__(self, in_planes, out_planes, groups=8, kernel_size=56, stride=1, bias=False, width=False):
+        # in_planes: 输入特征图的通道数 (C_in)
+        # out_planes: 输出特征图的通道数 (C_out)
+        # groups: 注意力头的数量 (多头注意力机制)
+        # kernel_size: 执行注意力的轴的长度 (H 或 W)
+        # stride: 如果需要，在输出时应用的步长，用于下采样
+        # width: 一个布尔值。如果为 True，则在宽度轴上应用注意力；否则在高度轴上应用。
         assert (in_planes % groups == 0) and (out_planes % groups == 0)
         super(AxialAttention, self).__init__()
         self.in_planes = in_planes
         self.out_planes = out_planes
         self.groups = groups
         self.group_planes = out_planes // groups
+        # self.group_planes: 每个注意力头所处理的通道数
         self.kernel_size = kernel_size
         self.stride = stride
         self.bias = bias
         self.width = width
 
         # Multi-head self attention
+        # 1. 多头自注意力的QKV变换层
+        # 使用一个 1x1 卷积将输入特征从 in_planes 映射到 out_planes * 2。
+        # 乘以2是因为后续的 Value 部分由内容(content)和位置(position)两部分组成，每一部分维度都是 out_planes。
         self.qkv_transform = qkv_transform(in_planes, out_planes * 2, kernel_size=1, stride=1, padding=0, bias=False)
+        # 对变换后的 qkv 进行批归一化
         self.bn_qkv = nn.BatchNorm1d(out_planes * 2)
+        # 对计算出的相似度矩阵进行批归一化
         self.bn_similarity = nn.BatchNorm2d(groups * 3)
         # self.bn_qk = nn.BatchNorm2d(groups)
         # self.bn_qr = nn.BatchNorm2d(groups)
         # self.bn_kr = nn.BatchNorm2d(groups)
+        # 对最终的输出进行批归一化
         self.bn_output = nn.BatchNorm1d(out_planes * 2)
 
         # Position embedding
+        # 2. 相对位置编码 (Relative Position Embedding)
+        # 这是一个可学习的参数，用于存储相对位置信息。
+        # Shape: (group_planes * 2, kernel_size * 2 - 1)
+        # 作用:
+        #   - 第一维 `group_planes * 2`: 编码了Q, K, V的位置信息。
+        #   - 第二维 `kernel_size * 2 - 1`: 覆盖了从 -(kernel_size-1) 到 +(kernel_size-1) 的所有可能的相对距离。
         self.relative = nn.Parameter(torch.randn(self.group_planes * 2, kernel_size * 2 - 1), requires_grad=True)
-        query_index = torch.arange(kernel_size).unsqueeze(0)
-        key_index = torch.arange(kernel_size).unsqueeze(1)
+
+        # 生成用于查询相对位置编码的索引
+        query_index = torch.arange(kernel_size).unsqueeze(0)  # Shape: (1, kernel_size)
+        key_index = torch.arange(kernel_size).unsqueeze(1)  # Shape: (kernel_size, 1)
+
+        # relative_index[i, j] = j - i，计算query位置j和key位置i之间的相对距离
+        # 加上 kernel_size - 1 是为了将索引偏移到非负数范围 [0, 2*kernel_size - 2]
         relative_index = key_index - query_index + kernel_size - 1
+
+        # 将索引矩阵展平，方便后续使用 torch.index_select 高效查找
+        # register_buffer: 将一个张量注册为模型的缓冲区，它会随模型保存，但不是模型参数（不会被优化器更新）
         self.register_buffer("flatten_index", relative_index.view(-1))
         if stride > 1:
             self.pooling = nn.AvgPool2d(stride, stride=stride)
@@ -146,46 +173,124 @@ class AxialAttention(nn.Module):
         self.reset_parameters()
 
     def forward(self, x):
+        # Shape: (N, C, H, W)
+
+        # --- 步骤 1: Permute & Reshape, 为1D注意力做准备 ---
         if self.width:
-            x = x.permute(0, 2, 1, 3)
+            # 在宽度(W)轴上做注意力，将H视为批次维度的一部分
+            x = x.permute(0, 2, 1, 3)  # Shape: (N, H, C, W)
         else:
-            x = x.permute(0, 3, 1, 2)  # N, W, C, H
+            # 在高度(H)轴上做注意力，将W视为批次维度的一部分 (以这个分支为例解释)
+            x = x.permute(0, 3, 1, 2)  # Shape: (N, W, C, H)
         N, W, C, H = x.shape
+
+        # 将批次维度和空间维度合并，使每一列(或行)成为一个独立的序列
         x = x.contiguous().view(N * W, C, H)
+        # Shape: (N*W, C, H)
+        # 作用: 将问题转化为一个批次大小为 N*W 的1D序列注意力问题，序列长度为H，特征维度为C。
 
         # Transformations
+        # --- 步骤 2: QKV 变换与分组 ---
+        # 通过1x1卷积(qkv_transform)将输入映射到Q,K,V空间，然后进行BN
         qkv = self.bn_qkv(self.qkv_transform(x))
+        # Shape of qkv: (N*W, out_planes * 2, H)
+        # 作用: 生成了Query, Key, Value的原始数据。
+
+        # 将qkv变形并切分为Q, K, V
+        # Reshape: (N*W, groups, group_planes * 2, H)
+        # 作用: 将通道维度拆分为 "头" 和 "每个头的通道"
         q, k, v = torch.split(
             qkv.reshape(N * W, self.groups, self.group_planes * 2, H),
             [self.group_planes // 2, self.group_planes // 2, self.group_planes],
             dim=2,
         )
+        # Shape of q: (N*W, groups, group_planes/2, H) -> 查询向量
+        # Shape of k: (N*W, groups, group_planes/2, H) -> 键向量
+        # Shape of v: (N*W, groups, group_planes,   H) -> 值向量
 
         # Calculate position embedding
+        # --- 步骤 3: 计算包含相对位置编码的相似度矩阵 ---
+        # 从可学习的 `self.relative` 参数中，根据预先计算好的 `flatten_index` 提取出所有位置对的相对编码
         all_embeddings = torch.index_select(self.relative, 1, self.flatten_index).view(
             self.group_planes * 2, self.kernel_size, self.kernel_size
         )
+        # Shape of all_embeddings: (group_planes*2, H, H)
+        # 作用: 这是一个查找表，`all_embeddings[:, i, j]` 存储了位置i和j之间的相对位置编码。
+
+        # 将位置编码也切分为q, k, v三部分
         q_embedding, k_embedding, v_embedding = torch.split(
             all_embeddings, [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=0
         )
-        qr = torch.einsum("bgci,cij->bgij", q, q_embedding)
-        kr = torch.einsum("bgci,cij->bgij", k, k_embedding).transpose(2, 3)
+        # Shape of q_embedding: (group_planes/2, H, H)
+        # Shape of k_embedding: (group_planes/2, H, H)
+        # Shape of v_embedding: (group_planes,   H, H)
+
+        # 计算注意力分数 (logits)，这里包含三项
+        # 1. 内容-内容 (Content-Content): q 和 k 的点积
         qk = torch.einsum("bgci, bgcj->bgij", q, k)
+        # Shape of qk: (N*W, groups, H, H)
+        # 作用: 标准的自注意力，衡量内容之间的相似性。
+
+        # 2. 内容-位置 (Content-Position): q 和 q_embedding 的点积
+        qr = torch.einsum("bgci,cij->bgij", q, q_embedding)
+        # Shape of qr: (N*W, groups, H, H)
+        # 作用: 衡量每个查询向量q与所有相对位置编码的相似性。
+
+        # 3. 位置-内容 (Position-Content): k 和 k_embedding 的点积
+        kr = torch.einsum("bgci,cij->bgij", k, k_embedding).transpose(2, 3)
+        # Shape of kr: (N*W, groups, H, H)
+        # 作用: 衡量每个键向量k与所有相对位置编码的相似性。转置是为了正确对齐。
+
+        # 将三项相似度拼接、BN、然后求和
         stacked_similarity = torch.cat([qk, qr, kr], dim=1)
+        # Shape: (N*W, groups * 3, H, H)
         stacked_similarity = self.bn_similarity(stacked_similarity).view(N * W, 3, self.groups, H, H).sum(dim=1)
+        # .sum(dim=1) 实质上是将三个分离出来的相似度矩阵 (qk, qr, kr 经过BN后的版本) 沿着刚才新创建的、长度为 3 的维度（dim=1）进行逐元素相加。
+        # 通过这个求和操作，模型将内容信息 (qk) 和两种位置信息 (qr, kr) 融合在了一起，形成了一个统一的、最终的注意力分数矩阵。
+        # Shape: (N*W, groups, H, H)
+        # 作用: 合并了内容和位置信息，得到最终的注意力分数
+
         # stacked_similarity = self.bn_qr(qr) + self.bn_kr(kr) + self.bn_qk(qk)
         # (N, groups, H, H, W)
-        similarity = F.softmax(stacked_similarity, dim=3)
-        sv = torch.einsum("bgij,bgcj->bgci", similarity, v)
-        sve = torch.einsum("bgij,cij->bgci", similarity, v_embedding)
-        stacked_output = torch.cat([sv, sve], dim=-1).view(N * W, self.out_planes * 2, H)
-        output = self.bn_output(stacked_output).view(N, W, self.out_planes, 2, H).sum(dim=-2)
 
+        # --- 步骤 4: Softmax 和加权求和 ---
+        # 沿key的维度(dim=3, 即最后一个H)进行softmax，得到注意力权重，即ttention Matrix
+        similarity = F.softmax(stacked_similarity, dim=3)
+        # Shape: (N*W, groups, H, H)
+        # 作用: `similarity[b, g, i, j]` 表示第i个输出对第j个输入的注意力权重。
+
+        # 使用注意力权重对 value 进行加权求和
+        # 1. 内容输出
+        sv = torch.einsum("bgij,bgcj->bgci", similarity, v)
+        # Shape of sv: (N*W, groups, group_planes, H)
+        # 作用: 这是标准的注意力输出，是内容信息的加权聚合。
+
+        # 2. 位置输出
+        sve = torch.einsum("bgij,cij->bgci", similarity, v_embedding)
+        # Shape of sve: (N*W, groups, group_planes, H)
+        # 作用: 这是位置编码的加权聚合，为输出增加了位置偏差。
+
+        # --- 步骤 5: 输出合并与最终塑形 ---
+        # 将内容输出和位置输出拼接起来
+        # 注意：这里的 dim=-1 是沿着最后一个维度(H)拼接，这是一个比较特殊的操作。
+        # 更常见的做法是沿着通道维度(dim=2)拼接。但从后续的view来看，这里的维度计算是匹配的。
+        stacked_output = torch.cat([sv, sve], dim=-1).view(N * W, self.out_planes * 2, H)
+        # Shape: (N*W, out_planes * 2, H)
+
+        # 经过BN，然后通过 view + sum 的方式将两个流(sv, sve)的信息合并
+        output = self.bn_output(stacked_output).view(N, W, self.out_planes, 2, H).sum(dim=-2)
+        # Shape after view: (N, W, out_planes, 2, H)
+        # Shape after sum: (N, W, out_planes, H)
+        # 作用: 得到每个注意力头的最终输出，并将通道数恢复到 out_planes。
+
+        # --- 步骤 6: Permute Back & Pooling ---
+        # 将Tensor的形状恢复到 (N, C, H, W) 的格式
         if self.width:
             output = output.permute(0, 2, 1, 3)
         else:
             output = output.permute(0, 2, 3, 1)
 
+        # 如果stride > 1, 进行平均池化下采样
         if self.stride > 1:
             output = self.pooling(output)
 

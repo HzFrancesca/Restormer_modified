@@ -130,6 +130,9 @@ class HWxHW_Attention(nn.Module):
         q = rearrange(q, "b (head c) h w -> b head (h w) c", head=self.num_heads)
         k = rearrange(k, "b (head c) h w -> b head (h w) c", head=self.num_heads)
         v = rearrange(v, "b (head c) h w -> b head (h w) c", head=self.num_heads)
+        # q = rearrange(q, "b (head c) h w -> (b head) (h w) c", head=self.num_heads)
+        # k = rearrange(k, "b (head c) h w -> (b head) (h w) c", head=self.num_heads)
+        # v = rearrange(v, "b (head c) h w -> (b head) (h w) c", head=self.num_heads)
 
         q = F.normalize(q, dim=-1)
         k = F.normalize(k, dim=-1)
@@ -511,6 +514,9 @@ class CxHxH_Attention(nn.Module):
         k = rearrange(k, "b (head c) h w -> b head c h w", head=self.num_heads)
         v = rearrange(v, "b (head c) h w -> b head c h w", head=self.num_heads)
 
+        # q = rearrange(q, "b (head c) h w -> (b head) c h w", head=self.num_heads)
+        # k = rearrange(k, "b (head c) h w -> (b head) c h w", head=self.num_heads)
+        # v = rearrange(v, "b (head c) h w -> (b head) c h w", head=self.num_heads)
         q = F.normalize(q, dim=-1)
         k = F.normalize(k, dim=-1)
 

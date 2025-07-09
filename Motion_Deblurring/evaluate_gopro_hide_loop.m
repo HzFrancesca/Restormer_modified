@@ -10,17 +10,17 @@ num_set = length(datasets);
 
 tic
 delete(gcp('nocreate'))
-parpool('local',20);
+parpool('local',8);
 
 % 定义number的范围和步长
-start_number = 396000;
+start_number = 392000;
 end_number = 432000;
 step = 4000;
 
 for number = start_number:step:end_number
     fprintf('\nTesting_weight: %d.pth \n',number);
     for idx_set = 1:num_set
-        file_path = strcat('./results/Deraining_Max320_642111/%d/%s/', datasets{idx_set}, '/');
+        file_path = sprintf('./results/Motion_Deblurring_Max320_WxW_432000/%d/%s/', number, datasets{idx_set});
         gt_path = strcat('./Datasets/test/', datasets{idx_set}, '/target/');
         path_list = [dir(strcat(file_path,'*.jpg')); dir(strcat(file_path,'*.png'))];
         gt_list = [dir(strcat(gt_path,'*.jpg')); dir(strcat(gt_path,'*.png'))];
@@ -54,3 +54,4 @@ end
 
 delete(gcp('nocreate'))
 toc
+

@@ -113,24 +113,30 @@ def proc(filename):
 datasets = ["RealBlur_J", "RealBlur_R"]
 
 if __name__ == "__main__":
-    start_number = 396000
+    start_number = 416000
     end_number = 432000
     step = 4000
     for number in range(start_number, end_number + 1, step):
         print(f"--- Processing iteration: {number} ---")
         for dataset in datasets:
-            file_path = os.path.join("results", dataset)
+            file_path = os.path.join("results", "Motion_Deblurring_Max320_WxW_432000", str(number), dataset)
             gt_path = os.path.join("Datasets", "test", dataset, "target")
+
+            # print(file_path)
 
             path_list = natsorted(glob(os.path.join(file_path, "*.png")) + glob(os.path.join(file_path, "*.jpg")))
             gt_list = natsorted(glob(os.path.join(gt_path, "*.png")) + glob(os.path.join(gt_path, "*.jpg")))
 
-            assert len(path_list) != 0, "Predicted files not found"
-            assert len(gt_list) != 0, "Target files not found"
+            try:
+                assert len(path_list) != 0, f"Predicted files not found in {file_path}"
+                assert len(gt_list) != 0, f"Target files not found in {gt_path}"
+            except AssertionError as e:
+                print(f"Skipping {dataset} for number {number} due to missing files: {e}")
+                continue  # Skip to the next dataset or number
 
             psnr, ssim = [], []
             img_files = [(i, j) for i, j in zip(gt_list, path_list)]
-            with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
                 for filename, PSNR_SSIM in zip(img_files, executor.map(proc, img_files)):
                     psnr.append(PSNR_SSIM[0])
                     ssim.append(PSNR_SSIM[1])
